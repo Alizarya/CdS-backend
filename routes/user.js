@@ -2,6 +2,9 @@ const userController = require("../controllers/user");
 const auth = require("../middlewares/auth");
 
 async function routes(fastify, options) {
+  // Route GET pour mes test
+  fastify.get("/user", userController.test);
+
   // Route pour s'inscrire
   fastify.post("/user/signup", userController.signup);
 

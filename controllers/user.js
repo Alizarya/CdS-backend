@@ -2,10 +2,14 @@
 let usersDB = [];
 
 //_____________________________________________________________________
+// POUR MES TESTS
+function test() {
+  return { message: "route GET user fonctionnelle et valide avec controller" };
+}
+
+//_____________________________________________________________________
 // Fonction pour générer un token JWT (à des fins de démonstration uniquement)
 function generateToken(userData) {
-  // Ici, vous devriez utiliser une librairie comme jsonwebtoken pour générer un token JWT valide
-  // Cela peut varier selon votre méthode d'authentification
   return "votreTokenJWT"; // C'est juste un exemple pour la démo
 }
 
@@ -86,6 +90,7 @@ async function updateEmail(request, reply) {
 }
 
 module.exports = {
+  test,
   signup,
   login,
   resetPassword,
