@@ -33,13 +33,13 @@ fastify.register(fastifyRateLimit, {
 });
 
 // Utilisation de Fastify Helmet pour sécuriser l'application
-fastify.register(fastifyHelmet);
+//fastify.register(fastifyHelmet);
 
 // Import des routes
-fastify.register(require("./routes/auth"));
-fastify.register(require("./routes/content"));
-fastify.register(require("./routes/form"));
-fastify.register(require("./routes/member"));
+fastify.register(require("./routes/user"));
+//fastify.register(require("./routes/content"));
+//fastify.register(require("./routes/form"));
+//fastify.register(require("./routes/member"));
 fastify.register(require("./routes/members"));
 
 // Démarrage du serveur
