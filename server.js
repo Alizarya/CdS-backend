@@ -11,7 +11,7 @@ const fastifyStatic = require("@fastify/static");
 const fastifyCors = require("@fastify/cors");
 fastify.register(fastifyCors, {
   origin: ["http://localhost:3000"], // Ajouter ici la future origine quand je l'aurai
-  methods: ["GET", "POST", "PUT"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
 });
 
 // Sécuriser contre le DDoS
@@ -32,7 +32,15 @@ fastify.register(fastifyRateLimit, {
   skip: postRateLimit,
 });
 
-// Ajouter les routes ici
+// Utilisation de Fastify Helmet pour sécuriser l'application
+fastify.register(fastifyHelmet);
+
+// Import des routes
+fastify.register(require("./routes/auth"));
+fastify.register(require("./routes/content"));
+fastify.register(require("./routes/form"));
+fastify.register(require("./routes/member"));
+fastify.register(require("./routes/members"));
 
 // Démarrage du serveur
 const start = async () => {
