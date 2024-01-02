@@ -5,7 +5,39 @@ const fastify = require("fastify")({ logger: true });
 const path = require("path");
 const fastifyStatic = require("@fastify/static");
 
-// Import des controllers
+// Gestion de swagger
+fastify.register(require("@fastify/swagger"), {
+  openapi: {
+    info: {
+      title: "Le Café des Sciences",
+      description:
+        "Documentation des routes API de l'application backend du café des sciences",
+      version: "1.0.0",
+    },
+  },
+});
+
+fastify.register(require("@fastify/swagger-ui"), {
+  routePrefix: "/documentation",
+  uiConfig: {
+    docExpansion: "full",
+    deepLinking: false,
+  },
+  uiHooks: {
+    onRequest: function (request, reply, next) {
+      next();
+    },
+    preHandler: function (request, reply, next) {
+      next();
+    },
+  },
+  staticCSP: true,
+  transformStaticCSP: (header) => header,
+  transformSpecification: (swaggerObject, request, reply) => {
+    return swaggerObject;
+  },
+  transformSpecificationClone: true,
+});
 
 // Gestion du cors
 const fastifyCors = require("@fastify/cors");
