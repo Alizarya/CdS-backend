@@ -1,7 +1,7 @@
 const formController = require("../controllers/form");
 
 async function routes(fastify, options) {
-  // Route pour s'inscrire avec commentaire de schéma
+  // Route pour envoyer un message
   fastify.post("/form/contact", {
     schema: {
       description:
@@ -11,10 +11,10 @@ async function routes(fastify, options) {
       // Autres détails de la documentation
       // ...
     },
-    handler: formController.signup,
+    handler: formController.contact,
   });
 
-  // Route pour se connecter avec commentaire de schéma
+  // Route pour candidater
   fastify.post("/form/candidacy", {
     schema: {
       description:
@@ -24,12 +24,10 @@ async function routes(fastify, options) {
       // Autres détails de la documentation
       // ...
     },
-    handler: formController.login,
+    handler: formController.candidacy,
   });
 
-  // Ajoutez des commentaires de schéma pour les autres routes de la même manière
-
-  // Route pour réinitialiser le mot de passe perdu
+  // Route pour être p-marrainé-e
   fastify.post("/form/sponsorship", {
     schema: {
       description:
@@ -39,7 +37,7 @@ async function routes(fastify, options) {
       // Autres détails de la documentation
       // ...
     },
-    handler: formController.resetPassword,
+    handler: formController.sponsorship,
   });
 }
 

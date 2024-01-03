@@ -70,7 +70,7 @@ fastify.register(fastifyRateLimit, {
 // Import des routes
 fastify.register(require("./routes/user"));
 //fastify.register(require("./routes/content"));
-//fastify.register(require("./routes/form"));
+fastify.register(require("./routes/form"));
 //fastify.register(require("./routes/member"));
 fastify.register(require("./routes/members"));
 
