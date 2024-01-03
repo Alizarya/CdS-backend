@@ -74,6 +74,11 @@ fastify.register(require("./routes/form"));
 fastify.register(require("./routes/member"));
 fastify.register(require("./routes/members"));
 
+// Route pour afficher le message "Le serveur te sert le café"
+fastify.get("/", async (request, reply) => {
+  return { message: "Le serveur te sert le café" };
+});
+
 // Démarrage du serveur
 const start = async () => {
   try {
