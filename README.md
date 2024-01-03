@@ -41,4 +41,8 @@ Ce guide fournit des instructions pour installer Node.js, installer les dépenda
    - Tapez `node server.js` dans le terminal pour démarrer le serveur.
 
 3. **Accès au serveur** :
+
    - Ouvrez un navigateur web et accédez au serveur en utilisant l'URL `http://localhost:5000`.
+
+4. **Accès à la documentation API** :
+   - Accédez au swagger en utilisant l'URL `http://localhost:5000/documentation`.
