@@ -39,6 +39,13 @@ fastify.register(require("@fastify/swagger-ui"), {
   transformSpecificationClone: true,
 });
 
+// Connexion à MongoDB
+require("dotenv").config();
+const fastifyMongo = require("@fastify/mongodb");
+fastify.register(fastifyMongo, {
+  url: `mongodb+srv://cds_admin:${process.env.MONGODB_PASSWORD}@cafedessciences.55uxeqd.mongodb.net/?retryWrites=true&w=majority`,
+});
+
 // Gestion du cors
 const fastifyCors = require("@fastify/cors");
 fastify.register(fastifyCors, {
@@ -65,7 +72,8 @@ fastify.register(fastifyRateLimit, {
 });
 
 // Utilisation de Fastify Helmet pour sécuriser l'application
-//fastify.register(fastifyHelmet);
+// fastify.register(fastifyHelmet);
+// à configurer
 
 // Import des routes
 fastify.register(require("./routes/user"));
@@ -74,7 +82,7 @@ fastify.register(require("./routes/form"));
 fastify.register(require("./routes/member"));
 fastify.register(require("./routes/members"));
 
-// Route pour afficher le message "Le serveur te sert le café"
+// Route du serveur
 fastify.get("/", async (request, reply) => {
   return { message: "Le serveur te sert le café" };
 });
