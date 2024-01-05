@@ -42,9 +42,17 @@ fastify.register(require("@fastify/swagger-ui"), {
 // Connexion à MongoDB
 require("dotenv").config();
 const fastifyMongo = require("@fastify/mongodb");
-fastify.register(fastifyMongo, {
-  url: `mongodb+srv://cds_admin:${process.env.MONGODB_PASSWORD}@cafedessciences.55uxeqd.mongodb.net/?retryWrites=true&w=majority`,
-});
+fastify
+  .register(fastifyMongo, {
+    url: `mongodb+srv://cds_admin:${process.env.MONGODB_PASSWORD}@cafedessciences.55uxeqd.mongodb.net`,
+  })
+  .then(() => {
+    console.log("Connexion à DB réussie !");
+    start(); // Démarrage du serveur après la connexion à MongoDB
+  })
+  .catch((err) => {
+    console.error("Erreur de connexion à DB :", err);
+  });
 
 // Gestion du cors
 const fastifyCors = require("@fastify/cors");
@@ -92,10 +100,9 @@ const start = async () => {
   try {
     await fastify.listen({ port: 5000 });
     //await fastify.listen({ path: "passenger" });
+    console.log("Le serveur est prêt à te servir un café");
   } catch (err) {
-    fastify.log.error(err);
+    console.error("Erreur lors du démarrage du serveur :", err);
     process.exit(1);
   }
-  console.log("Le serveur est prêt à te servir un café");
 };
-start();
