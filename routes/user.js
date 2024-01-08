@@ -47,8 +47,33 @@ async function routes(fastify, options) {
       description: "Route pour permettre à un ou une membre de s'inscrire.",
       tags: ["User"],
       summary: "Inscription à l'espace membre",
-      // Autres détails de la documentation
-      // ...
+      body: {
+        type: "object",
+        required: ["code", "email", "password", "radioButtonChecked"],
+        properties: {
+          code: { type: "string" },
+          email: { type: "string", format: "email" },
+          password: {
+            type: "string",
+            minLength: 8,
+            pattern: "^(?=.*[A-Z])(?=.*[0-9]).{8,}$",
+          },
+          radioButtonChecked: { type: "string" },
+        },
+      },
+      response: {
+        200: {
+          type: "object",
+          properties: {
+            message: { type: "string" },
+            user: { type: "object" },
+          },
+        },
+        400: { type: "object", properties: { message: { type: "string" } } },
+        403: { type: "object", properties: { message: { type: "string" } } },
+        409: { type: "object", properties: { message: { type: "string" } } },
+        500: { type: "object", properties: { message: { type: "string" } } },
+      },
     },
     handler: userController.signup,
   });

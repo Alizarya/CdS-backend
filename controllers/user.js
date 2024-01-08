@@ -1,5 +1,7 @@
-// Simulation de ma base de données d'utilisateurs
-let usersDB = [];
+require("dotenv").config();
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
 //_____________________________________________________________________
 // POUR MES TESTS
@@ -8,13 +10,11 @@ function test() {
 }
 
 //_____________________________________________________________________
-// Fonction pour générer un token JWT (à des fins de démonstration uniquement)
-function generateToken(userData) {
-  return "votreTokenJWT"; // C'est juste un exemple pour la démo
-}
-
-//_____________________________________________________________________
 // Gestion de l'inscription d'un user
+
+// Regex pour validation du mot de passe
+const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
+
 async function signup(request, reply) {
   const { code, email, password, radioButtonChecked } = request.body;
 
@@ -23,13 +23,54 @@ async function signup(request, reply) {
     return reply.code(400).send({ message: "Champs requis manquants" });
   }
 
-  // Enregistrement du nouvel utilisateur dans la base de données (simulation)
-  const newUser = { code, email, password, radioButtonChecked };
-  usersDB.push(newUser);
+  // Validation du mot de passe
+  if (!passwordRegex.test(password)) {
+    return reply.code(400).send({
+      message:
+        "Le mot de passe doit contenir au moins 8 caractères, dont au moins une majuscule et un chiffre.",
+    });
+  }
 
-  // Envoi de l'e-mail de confirmation
+  try {
+    // Vérification du code d'inscription
+    const signupCode = process.env.SIGNUP_CODE;
 
-  reply.send({ message: "Inscription réussie" });
+    if (code !== signupCode) {
+      return reply.code(403).send({
+        message:
+          "Code d'inscription incorrect, rapprochez vous du bureau de l'association pour obtenir un code valide.",
+      });
+    }
+
+    // Hashage du mot de passe
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Création d'une nouvelle instance User
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+    });
+
+    // Enregistrement dans la base de données
+    const savedUser = await newUser.save();
+
+    // Envoi de l'e-mail de confirmation
+
+    reply.code(200).send({ message: "Inscription réussie", user: savedUser });
+  } catch (error) {
+    if (
+      error.name === "ValidationError" &&
+      error.errors &&
+      error.errors.email
+    ) {
+      return reply
+        .code(409)
+        .send({ message: "Cet e-mail est déjà enregistré." });
+    } else {
+      console.error("Erreur lors de l'enregistrement :", error);
+      reply.code(500).send({ message: "Erreur lors de l'inscription" });
+    }
+  }
 }
 
 //_____________________________________________________________________
@@ -37,19 +78,45 @@ async function signup(request, reply) {
 async function login(request, reply) {
   const { email, password } = request.body;
 
-  // Vérification des informations d'identification (simulation)
-  const user = usersDB.find(
-    (user) => user.email === email && user.password === password
-  );
-
-  if (!user) {
-    return reply.code(401).send({ message: "Identifiants invalides" });
+  // Vérification des données requises
+  if (!email || !password) {
+    return reply
+      .code(400)
+      .send({ message: "Veuillez fournir l'email et le mot de passe." });
   }
 
-  // Génération d'un token JWT (à des fins de démonstration uniquement)
-  const token = generateToken({ email: user.email });
+  try {
+    // Recherche par email dans la BDD
+    const user = await User.findOne({ email });
 
-  reply.send({ token });
+    // Vérification si l'user existant
+    if (!user) {
+      return reply
+        .code(401)
+        .send({ message: "Adresse e-mail ou mot de passe incorrect." });
+    }
+
+    // Vérification du mot de passe avec bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return reply
+        .code(401)
+        .send({ message: "Adresse e-mail ou mot de passe incorrect." });
+    }
+
+    // Génération du JWT valide pendant une demi-heure (30 minutes)
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "60m",
+    });
+
+    console.log(token);
+
+    reply.send({ message: "Connexion réussie", token });
+  } catch (error) {
+    console.error("Erreur lors de la connexion :", error);
+    reply.code(500).send({ message: "Erreur lors de la connexion" });
+  }
 }
 
 //_____________________________________________________________________

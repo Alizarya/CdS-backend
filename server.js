@@ -40,18 +40,20 @@ fastify.register(require("@fastify/swagger-ui"), {
 });
 
 // Connexion à MongoDB
+// Connexion à MongoDB avec Mongoose
 require("dotenv").config();
-const fastifyMongo = require("@fastify/mongodb");
-fastify
-  .register(fastifyMongo, {
-    url: `mongodb+srv://cds_admin:${process.env.MONGODB_PASSWORD}@cafedessciences.55uxeqd.mongodb.net`,
+const mongoose = require("mongoose");
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
   })
   .then(() => {
-    console.log("Connexion à DB réussie !");
-    start(); // Démarrage du serveur après la connexion à MongoDB
+    console.log("Connexion à MongoDB avec Mongoose réussie !");
+    start();
   })
   .catch((err) => {
-    console.error("Erreur de connexion à DB :", err);
+    console.error("Erreur de connexion à MongoDB avec Mongoose :", err);
   });
 
 // Gestion du cors
