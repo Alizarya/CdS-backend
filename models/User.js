@@ -16,6 +16,8 @@ const userSchema = mongoose.Schema({
     },
   },
   password: { type: String, required: true },
+  resetToken: { type: String },
+  resetTokenExpiration: { type: Date },
 });
 
 // Possibilité de n'enregistrer qu'une fois le même email

@@ -39,7 +39,6 @@ fastify.register(require("@fastify/swagger-ui"), {
   transformSpecificationClone: true,
 });
 
-// Connexion à MongoDB
 // Connexion à MongoDB avec Mongoose
 require("dotenv").config();
 const mongoose = require("mongoose");
@@ -60,7 +59,7 @@ mongoose
 const fastifyCors = require("@fastify/cors");
 fastify.register(fastifyCors, {
   origin: ["http://localhost:3000"], // Ajouter ici la future origine quand je l'aurai
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PATCH", "DELETE"],
 });
 
 // Sécuriser contre le DDoS

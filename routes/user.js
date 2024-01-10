@@ -2,6 +2,7 @@ const userController = require("../controllers/user");
 const auth = require("../middlewares/auth");
 
 async function routes(fastify, options) {
+  //____________________________________________
   // Route GET pour mes tests avec commentaire de schéma
   fastify.get("/user", {
     schema: {
@@ -41,7 +42,8 @@ async function routes(fastify, options) {
     handler: userController.test,
   });
 
-  // Route pour s'inscrire avec commentaire de schéma
+  //____________________________________________
+  // Route pour s'inscrire
   fastify.post("/user/signup", {
     schema: {
       description: "Route pour permettre à un ou une membre de s'inscrire.",
@@ -78,6 +80,7 @@ async function routes(fastify, options) {
     handler: userController.signup,
   });
 
+  //____________________________________________
   // Route pour se connecter avec commentaire de schéma
   fastify.post("/user/login", {
     schema: {
@@ -92,12 +95,27 @@ async function routes(fastify, options) {
 
   // Ajoutez des commentaires de schéma pour les autres routes de la même manière
 
-  // Route pour réinitialiser le mot de passe perdu
+  //____________________________________________
+  // Route pour recevoir le lien de réinitialisation du mot de passe perdu
   fastify.post("/user/reset-password", {
     schema: {
       description:
         "Route pour permettre à un ou une membre de réinitialiser son mot de passe.",
-      tags: ["User"], // Tags pour regrouper vos endpoints
+      tags: ["User"],
+      summary: "Réinitialisation du mot de passe",
+      // Autres détails de la documentation
+      // ...
+    },
+    handler: userController.mailToResetPassword,
+  });
+
+  //____________________________________________
+  // Route pour réinitialiser le mot de passe perdu
+  fastify.patch("/user/reset-password", {
+    schema: {
+      description:
+        "Route pour permettre à un ou une membre de réinitialiser son mot de passe.",
+      tags: ["User"],
       summary: "Réinitialisation du mot de passe",
       // Autres détails de la documentation
       // ...
@@ -105,8 +123,9 @@ async function routes(fastify, options) {
     handler: userController.resetPassword,
   });
 
+  //____________________________________________
   // Route pour mettre à jour le mot de passe
-  fastify.put("/user/update-password", {
+  fastify.patch("/user/update-password", {
     schema: {
       description:
         "Route pour permettre à un ou une membre de mettre à jour son mot de passe.",
@@ -119,6 +138,7 @@ async function routes(fastify, options) {
     handler: userController.updatePassword,
   });
 
+  //____________________________________________
   // Route pour mettre à jour l'email
   fastify.put("/user/update-email", {
     schema: {
