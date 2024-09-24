@@ -1,7 +1,7 @@
+const { getAllMembers } = require("../controllers/members");
+
 async function routes(fastify) {
-  fastify.get("/members", async (request, reply) => {
-    return { message: "Liste de tous les membres" };
-  });
+  fastify.get("/members", getAllMembers);
 }
 
 module.exports = routes;
