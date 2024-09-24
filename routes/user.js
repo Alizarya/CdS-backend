@@ -81,19 +81,73 @@ async function routes(fastify, options) {
   });
 
   //____________________________________________
-  // Route pour se connecter avec commentaire de schéma
+  // Route pour se connecter
   fastify.post("/user/login", {
     schema: {
       description: "Route pour permettre à un ou une membre de se connecter.",
       tags: ["User"],
       summary: "Connexion à l'espace membre",
-      // Autres détails de la documentation
-      // ...
+      body: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            description: "Adresse e-mail de l'utilisateur",
+          },
+          password: {
+            type: "string",
+            description: "Mot de passe de l'utilisateur",
+          },
+        },
+      },
+      response: {
+        200: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description: "Message de confirmation de connexion",
+            },
+            token: {
+              type: "string",
+              description: "Jeton JWT pour l'authentification",
+            },
+          },
+        },
+        400: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description: "Erreur si des données requises sont manquantes",
+            },
+          },
+        },
+        401: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Erreur si l'adresse e-mail ou le mot de passe est incorrect",
+            },
+          },
+        },
+        500: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description: "Erreur lors de la connexion",
+            },
+          },
+        },
+      },
     },
     handler: userController.login,
   });
-
-  // Ajoutez des commentaires de schéma pour les autres routes de la même manière
 
   //____________________________________________
   // Route pour recevoir le lien de réinitialisation du mot de passe perdu
@@ -103,8 +157,49 @@ async function routes(fastify, options) {
         "Route pour permettre à un ou une membre de réinitialiser son mot de passe.",
       tags: ["User"],
       summary: "Réinitialisation du mot de passe",
-      // Autres détails de la documentation
-      // ...
+      body: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            description:
+              "Adresse e-mail de l'utilisateur pour la réinitialisation",
+          },
+        },
+      },
+      response: {
+        200: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Message de confirmation de l'envoi de l'email de réinitialisation",
+            },
+          },
+        },
+        404: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description: "Erreur si l'utilisateur n'est pas trouvé",
+            },
+          },
+        },
+        500: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Erreur lors de l'envoi de l'email de réinitialisation",
+            },
+          },
+        },
+      },
     },
     handler: userController.mailToResetPassword,
   });
@@ -114,11 +209,74 @@ async function routes(fastify, options) {
   fastify.patch("/user/reset-password", {
     schema: {
       description:
-        "Route pour permettre à un ou une membre de réinitialiser son mot de passe.",
+        "Permet à un utilisateur de réinitialiser son mot de passe perdu en utilisant un lien de réinitialisation.",
       tags: ["User"],
-      summary: "Réinitialisation du mot de passe",
-      // Autres détails de la documentation
-      // ...
+      summary: "Réinitialisation du mot de passe perdu",
+      body: {
+        type: "object",
+        properties: {
+          resetToken: {
+            type: "string",
+            description: "Token de réinitialisation",
+          },
+          email: {
+            type: "string",
+            format: "email",
+            description: "Adresse e-mail de l'utilisateur",
+          },
+          password: {
+            type: "string",
+            description: "Nouveau mot de passe à définir",
+          },
+        },
+        required: ["resetToken", "email", "password"],
+      },
+      response: {
+        200: {
+          description: "Succès de la réinitialisation du mot de passe",
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Message indiquant que le mot de passe a été réinitialisé avec succès.",
+            },
+          },
+        },
+        400: {
+          description: "Erreur lors de la réinitialisation du mot de passe",
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Message d'erreur indiquant le problème lors de la réinitialisation du mot de passe.",
+            },
+          },
+        },
+        404: {
+          description: "Utilisateur non trouvé",
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Message indiquant que l'utilisateur n'a pas été trouvé.",
+            },
+          },
+        },
+        500: {
+          description: "Erreur interne du serveur",
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              description:
+                "Message d'erreur en cas de problème interne du serveur.",
+            },
+          },
+        },
+      },
     },
     handler: userController.resetPassword,
   });
@@ -140,7 +298,7 @@ async function routes(fastify, options) {
 
   //____________________________________________
   // Route pour mettre à jour l'email
-  fastify.put("/user/update-email", {
+  fastify.patch("/user/update-email", {
     schema: {
       description:
         "Route pour permettre à un ou une membre de mettre à jour son adresse email.",

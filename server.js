@@ -58,7 +58,7 @@ mongoose
 // Gestion du cors
 const fastifyCors = require("@fastify/cors");
 fastify.register(fastifyCors, {
-  origin: ["http://localhost:3000"], // Ajouter ici la future origine quand je l'aurai
+  origin: ["*"], // Ajouter ici la future origine quand je l'aurai
   methods: ["GET", "POST", "PATCH", "DELETE"],
 });
 
@@ -96,14 +96,25 @@ fastify.get("/", async (request, reply) => {
   return { message: "Le serveur te sert le café" };
 });
 
-// Démarrage du serveur
+// Configuration du lancement du serveur en fonction de l'environnement
 const start = async () => {
   try {
-    await fastify.listen({ port: 5000 });
-    //await fastify.listen({ path: "passenger" });
-    console.log("Le serveur est prêt à te servir un café");
+    // Si passenger, se lance avec
+    if (typeof PhusionPassenger !== "undefined") {
+      PhusionPassenger.configure({ autoInstall: false });
+      await fastify.listen({ path: "passenger" });
+      console.log("Le serveur sert le café sur Passenger");
+    } else {
+      // Sinon port 5000
+      if (!fastify.server.listening) {
+        await fastify.listen({ port: 5000 });
+        console.log("Le serveur sert le café sur le port 5000");
+      }
+    }
   } catch (err) {
     console.error("Erreur lors du démarrage du serveur :", err);
     process.exit(1);
   }
 };
+
+start();

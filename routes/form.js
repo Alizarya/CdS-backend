@@ -32,7 +32,7 @@ async function routes(fastify, options) {
     schema: {
       description:
         "Route pour permettre à une personne d'envoyer une candidature avec parrainage ou marrainage au bureau.",
-      tags: ["Form"], // Tags pour regrouper vos endpoints
+      tags: ["Form"],
       summary: "P-Marrainage",
       // Autres détails de la documentation
       // ...

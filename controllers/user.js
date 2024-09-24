@@ -148,7 +148,7 @@ async function login(request, reply) {
 }
 
 //_____________________________________________________________________
-// Gestion de la réinitialisation du mot de passe perdu
+// Gestion de l'envoi du mail pour mot de passe perdu
 
 async function mailToResetPassword(request, reply) {
   const { email } = request.body;
@@ -239,7 +239,7 @@ async function resetPassword(request, reply) {
     if (!regex.test(password)) {
       return reply.code(400).send({
         message:
-          "Le mot de passe doit contenir au moins une lettre majuscule, un chiffre et faire au moins 8 caractères.",
+          "Le mot de passe doit contenir au moins 8 caractères, dont au moins une majuscule et un chiffre.",
       });
     }
 
@@ -299,7 +299,7 @@ async function resetPassword(request, reply) {
 async function updatePassword(request, reply) {
   const { email, password } = request.body;
 
-  // Logique pour mettre à jour l'email ici
+  // Logique pour mettre à jour le mdp ici
 
   // Logique pour envoyer un e-mail de confirmation ici
 

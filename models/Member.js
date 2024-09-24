@@ -4,14 +4,19 @@ const emailValidator = require("email-validator");
 
 // Sous-modèle pour les liens avec logo
 const linkWithLogoSchema = mongoose.Schema({
-  site: String,
+  website: String,
   blog: String,
   youtube: String,
   twitch: String,
+  tiktok: String,
   twitter: String,
   bluesky: String,
   mastodon: String,
   facebook: String,
+  instagram: String,
+  threads: String,
+  linkedin: String,
+  podcast: String,
   financement: String,
   autres: String,
 });
