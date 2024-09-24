@@ -57,7 +57,7 @@ const memberSchema = mongoose.Schema({
   prénom: String,
   image: String,
   tags: {
-    type: String,
+    type: [String],
     required: true,
   },
   liens_avec_logo: linkWithLogoSchema,
