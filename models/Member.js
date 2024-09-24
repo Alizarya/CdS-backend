@@ -61,12 +61,12 @@ const memberSchema = mongoose.Schema({
     required: true,
   },
   liens_avec_logo: linkWithLogoSchema,
-  description_courte: {
+  shortdescription: {
     type: String,
     required: true,
   },
-  description_longue: String,
-  contenu: [contentSchema],
+  description: String,
+  content: [contentSchema],
 });
 
 // Application du plugin uniqueValidator pour la vérification des champs uniques
