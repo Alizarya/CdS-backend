@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
 const emailValidator = require("email-validator");
 
-// Sous-modèle pour les liens avec logo
-const linkWithLogoSchema = mongoose.Schema({
+// Sous-modèle pour les liens
+const linkSchema = mongoose.Schema({
   website: String,
   blog: String,
   youtube: String,
@@ -24,8 +24,8 @@ const linkWithLogoSchema = mongoose.Schema({
 // Sous-modèle pour le contenu
 const contentSchema = mongoose.Schema({
   image: String,
-  lien: String,
-  titre: String,
+  link: String,
+  title: String,
   description: String,
 });
 
@@ -60,7 +60,7 @@ const memberSchema = mongoose.Schema({
     type: [String],
     required: true,
   },
-  liens_avec_logo: linkWithLogoSchema,
+  links: linkSchema,
   shortdescription: {
     type: String,
     required: true,
