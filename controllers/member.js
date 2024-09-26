@@ -66,7 +66,16 @@ async function createMember(request, reply) {
         .send({ message: "Le format des liens est incorrect." });
     }
 
-    // 5. Créer un nouveau membre
+    // 5. Filtrer et ne garder que les liens complétés, et limiter à 3
+    const validLinks = Object.entries(parsedLinks)
+      .filter(([key, value]) => value && value.trim() !== "") // Ne garder que les liens non vides
+      .slice(0, 3) // Limiter à 3 liens
+      .reduce((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
+
+    // 6. Créer un nouveau membre
     const newMember = new Member({
       userId,
       email,
@@ -76,19 +85,19 @@ async function createMember(request, reply) {
       tags: tags.split(",").map((tag) => tag.trim()),
       shortdescription,
       description: description || "",
-      links: parsedLinks, // Utiliser le lien analysé
+      links: validLinks,
       content: parsedContent.map((item) => ({
         image: item.image || "",
-        link: item.link || "", // Assurez-vous que c'est 'link'
-        title: item.title || "", // Assurez-vous que c'est 'title'
+        link: item.link || "",
+        title: item.title || "",
         description: item.description || "",
       })),
     });
 
-    // 6. Sauvegarder le membre dans la base de données
+    // 7. Sauvegarder le membre dans la base de données
     await newMember.save();
 
-    // 7. Retourner une réponse de succès
+    // 8. Retourner une réponse de succès
     reply
       .status(201)
       .send({ message: "Membre créé avec succès", member: newMember });
