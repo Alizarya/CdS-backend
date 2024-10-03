@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
-const emailValidator = require("email-validator");
 
 // Sous-modèle pour les liens
 const linkSchema = mongoose.Schema({
@@ -30,43 +29,18 @@ const contentSchema = mongoose.Schema({
 });
 
 // Modèle des membres
-const memberSchema = mongoose.Schema({
-  userId: {
-    type: Number,
-    required: true,
-    unique: true,
-  },
-  softDelete: {
-    type: Boolean,
-    default: false,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    validate: {
-      validator: emailValidator.validate,
-      message: "Adresse mail invalide",
-    },
-  },
-  pseudo: {
-    type: String,
-    required: true,
-  },
-  nom: String,
-  prénom: String,
-  image: String,
-  tags: {
-    type: [String],
-    required: true,
-  },
-  links: linkSchema,
-  shortdescription: {
-    type: String,
-    required: true,
-  },
-  description: String,
-  content: [contentSchema],
+const memberSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  pseudo: { type: String, default: "" },
+  nom: { type: String, default: "" },
+  image: { type: String, default: "" },
+  tags: { type: [String], default: [] }, // Si vous utilisez un tableau
+  shortdescription: { type: String, default: "" },
+  description: { type: String, default: "" },
+  links: { type: Object, default: {} },
+  content_format: { type: String, default: "" },
+  content: { type: Array, default: [] },
+  softDelete: { type: Boolean, default: true },
 });
 
 // Application du plugin uniqueValidator pour la vérification des champs uniques

@@ -14,31 +14,25 @@ async function deleteMember(request, reply) {
 
 async function createMember(request, reply) {
   try {
-    // 1. Récupérer les données envoyées dans la requête
+    // Récupérer les données envoyées dans la requête
     const {
       userId,
-      email,
-      pseudo,
-      nom,
-      image,
-      tags,
-      shortdescription,
-      description,
-      links,
-      content,
+      pseudo = "", // valeur par défaut
+      nom = "", // valeur par défaut
+      image = "", // valeur par défaut
+      tags = "", // valeur par défaut
+      shortdescription = "", // valeur par défaut
+      description = "", // valeur par défaut
+      links = {}, // valeur par défaut, un objet vide
+      content_format = "", // valeur par défaut
+      content = [], // valeur par défaut, un tableau vide
+      softDelete = true, // valeur par défaut
     } = request.body;
 
     // Vérifiez les valeurs reçues dans les logs
     console.log("Données reçues:", request.body);
 
-    // 2. Validation des champs obligatoires
-    if (!userId || !email || !pseudo || !tags || !shortdescription) {
-      return reply
-        .status(400)
-        .send({ message: "Certains champs obligatoires sont manquants." });
-    }
-
-    // 3. Vérification et traitement de 'content'
+    // Vérification et traitement de 'content'
     let parsedContent = [];
     try {
       if (typeof content === "string") {
@@ -52,7 +46,7 @@ async function createMember(request, reply) {
         .send({ message: "Le format du contenu est incorrect." });
     }
 
-    // 4. Vérification et traitement de 'links'
+    // Vérification et traitement des liens
     let parsedLinks = {};
     try {
       if (typeof links === "string") {
@@ -66,38 +60,39 @@ async function createMember(request, reply) {
         .send({ message: "Le format des liens est incorrect." });
     }
 
-    // 5. Filtrer et ne garder que les liens complétés, et limiter à 3
+    // Filtrer et ne garder que les liens complétés, et limiter à 3
     const validLinks = Object.entries(parsedLinks)
-      .filter(([key, value]) => value && value.trim() !== "") // Ne garder que les liens non vides
-      .slice(0, 3) // Limiter à 3 liens
+      .filter(([key, value]) => value && value.trim() !== "")
+      .slice(0, 3)
       .reduce((acc, [key, value]) => {
         acc[key] = value;
         return acc;
       }, {});
 
-    // 6. Créer un nouveau membre
+    // Créer un nouveau membre sans définir explicitement l'_id
     const newMember = new Member({
-      userId,
-      email,
+      userId, // Utiliser userId comme un champ normal
       pseudo,
-      nom: nom || "",
-      image: image || "",
+      nom,
+      image,
       tags: tags.split(",").map((tag) => tag.trim()),
       shortdescription,
-      description: description || "",
+      description,
       links: validLinks,
+      content_format,
       content: parsedContent.map((item) => ({
         image: item.image || "",
         link: item.link || "",
         title: item.title || "",
         description: item.description || "",
       })),
+      softDelete, // Utiliser la valeur fournie pour softDelete
     });
 
-    // 7. Sauvegarder le membre dans la base de données
+    // Sauvegarder le membre dans la base de données
     await newMember.save();
 
-    // 8. Retourner une réponse de succès
+    // Retourner une réponse de succès
     reply
       .status(201)
       .send({ message: "Membre créé avec succès", member: newMember });

@@ -114,6 +114,10 @@ async function routes(fastify, options) {
               type: "string",
               description: "Jeton JWT pour l'authentification",
             },
+            userId: {
+              type: "string",
+              description: "Id de l'utilisateurice",
+            },
           },
         },
         400: {
@@ -287,10 +291,8 @@ async function routes(fastify, options) {
     schema: {
       description:
         "Route pour permettre à un ou une membre de mettre à jour son mot de passe.",
-      tags: ["User"], // Tags pour regrouper vos endpoints
+      tags: ["User"],
       summary: "Mise à jour du mot de passe",
-      // Autres détails de la documentation
-      // ...
     },
     preHandler: auth,
     handler: userController.updatePassword,
@@ -302,10 +304,8 @@ async function routes(fastify, options) {
     schema: {
       description:
         "Route pour permettre à un ou une membre de mettre à jour son adresse email.",
-      tags: ["User"], // Tags pour regrouper vos endpoints
+      tags: ["User"],
       summary: "Mise à jour de l'email",
-      // Autres détails de la documentation
-      // ...
     },
     preHandler: auth,
     handler: userController.updateEmail,

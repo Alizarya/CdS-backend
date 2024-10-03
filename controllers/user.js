@@ -103,7 +103,6 @@ async function signup(request, reply) {
   }
 }
 
-//_____________________________________________________________________
 // Gestion de la connexion du user
 async function login(request, reply) {
   const { email, password } = request.body;
@@ -118,8 +117,9 @@ async function login(request, reply) {
   try {
     // Recherche par email dans la BDD
     const user = await User.findOne({ email });
+    console.log("User trouvé :", user);
 
-    // Vérification si l'user existant
+    // Vérification si l'utilisateurice existe
     if (!user) {
       return reply
         .code(401)
@@ -140,7 +140,15 @@ async function login(request, reply) {
       expiresIn: "60m",
     });
 
-    reply.send({ message: "Connexion réussie", token });
+    // Log de l'ID avant de l'envoyer
+    console.log("UserID à renvoyer :", user._id);
+
+    // Renvoi de la réponse avec le token et l'ID
+    reply.send({
+      message: "Connexion réussie",
+      token,
+      userId: user._id.toString(),
+    });
   } catch (error) {
     console.error("Erreur lors de la connexion :", error);
     reply.code(500).send({ message: "Erreur lors de la connexion" });
