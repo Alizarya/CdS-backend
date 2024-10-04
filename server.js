@@ -59,7 +59,7 @@ mongoose
 const fastifyCors = require("@fastify/cors");
 fastify.register(fastifyCors, {
   origin: ["*"], // Ajouter ici la future origine quand je l'aurai
-  methods: ["GET", "POST", "PATCH", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
 });
 
 // Sécuriser contre le DDoS
@@ -88,7 +88,6 @@ fastify.register(fastifyRateLimit, {
 fastify.register(require("./routes/user"));
 fastify.register(require("./routes/content"));
 fastify.register(require("./routes/form"));
-fastify.register(require("./routes/member"));
 fastify.register(require("./routes/members"));
 
 // Route du serveur
