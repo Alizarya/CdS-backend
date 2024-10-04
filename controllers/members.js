@@ -225,8 +225,36 @@ async function updateMember(request, reply) {
   }
 }
 
+// __________________________
+// Récupérer un membre par son ID
 async function getMember(request, reply) {
-  reply.send({ message: "route ok - getMember" });
+  try {
+    // Récupérer l'ID du membre à partir des paramètres
+    const memberId = request.params.id;
+
+    // Chercher le membre par ID
+    const member = await Member.findById(memberId);
+
+    // Si le membre n'existe pas, retourner une réponse 404
+    if (!member) {
+      return reply.status(404).send({ message: "Membre non trouvé" });
+    }
+
+    // Retourner le membre trouvé
+    reply.send({ message: "Membre trouvé", member });
+  } catch (error) {
+    console.error("Erreur lors de la récupération du membre:", error);
+
+    // Vérifier si l'erreur est liée à un ID invalide
+    if (error.name === "CastError") {
+      return reply.status(400).send({ message: "ID de membre invalide" });
+    }
+
+    // Gérer les autres types d'erreurs
+    reply.status(500).send({
+      message: "Une erreur est survenue lors de la récupération du membre.",
+    });
+  }
 }
 
 async function deleteMember(request, reply) {
