@@ -32,9 +32,6 @@ async function createMember(request, reply) {
       softDelete = true, // valeur par défaut
     } = request.body;
 
-    // Vérifiez les valeurs reçues dans les logs
-    console.log("Données reçues:", request.body);
-
     // Vérification et traitement de 'content'
     let parsedContent = [];
     try {
@@ -137,10 +134,14 @@ async function updateMember(request, reply) {
       softDelete,
     } = request.body;
 
-    // Vérification et traitement des 'tags'
+    // Assurer que softDelete est un booléen
+    const isSoftDelete =
+      softDelete === "true" || softDelete === true ? true : false;
+
+    // Vérification et traitement des 'tags' (doivent être un tableau)
     let updatedTags = [];
-    if (tags) {
-      updatedTags = tags.split(",").map((tag) => tag.trim());
+    if (Array.isArray(tags)) {
+      updatedTags = tags.slice(0, 3); // Garder uniquement 3 tags maximum
     }
 
     // Vérification et traitement de 'content'
@@ -188,7 +189,7 @@ async function updateMember(request, reply) {
           pseudo,
           nom,
           image,
-          tags: updatedTags,
+          tags: updatedTags, // Utilisation des tags limités à 3
           shortdescription,
           description,
           links: validLinks,
@@ -199,7 +200,7 @@ async function updateMember(request, reply) {
             title: item.title || "",
             description: item.description || "",
           })),
-          softDelete,
+          softDelete: isSoftDelete, // Utilisation de la valeur booléenne
         },
       },
       { new: true, runValidators: true }
@@ -257,8 +258,34 @@ async function getMember(request, reply) {
   }
 }
 
+// __________________________
+// Supprimer un membre par son ID
 async function deleteMember(request, reply) {
-  reply.send({ message: "route ok - deleteMember" });
+  const { id } = request.params; // Obtenez l'ID du membre depuis les paramètres de la requête
+
+  try {
+    // Validation du format de l'ID (facultatif)
+    if (!id) {
+      return reply.status(400).send({ message: "L'ID du membre est requis" });
+    }
+
+    // Tentez de trouver et de supprimer le membre
+    const deletedMember = await Member.findByIdAndDelete(id);
+
+    // Vérifiez si le membre a été trouvé et supprimé
+    if (!deletedMember) {
+      return reply.status(404).send({ message: "Membre non trouvé" });
+    }
+
+    // Répondez avec un message de succès
+    reply.send({ message: "Membre supprimé avec succès" });
+  } catch (error) {
+    // Gérez les erreurs qui surviennent pendant le processus de suppression
+    console.error("Erreur lors de la suppression du membre :", error);
+    reply.status(500).send({
+      message: "Une erreur est survenue lors de la suppression du membre",
+    });
+  }
 }
 
 module.exports = {
