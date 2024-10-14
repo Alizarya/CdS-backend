@@ -1,5 +1,23 @@
 const Member = require("../models/member");
 
+const SocialsLogos = {
+  website: "fa-solid fa-globe",
+  blog: "fa-solid fa-square-pen",
+  youtube: "fa-brands fa-square-youtube",
+  twitch: "fa-brands fa-twitch",
+  tiktok: "fa-brands fa-tiktok",
+  twitter: "fa-brands fa-square-x-twitter",
+  bluesky: "fa-solid fa-square",
+  mastodon: "fa-brands fa-mastodon",
+  facebook: "fa-brands fa-square-facebook",
+  instagram: "fa-brands fa-square-instagram",
+  threads: "fa-brands fa-square-threads",
+  linkedin: "fa-brands fa-linkedin",
+  podcast: "fa-solid fa-podcast",
+  financement: "fa-solid fa-circle-dollar-to-slot",
+  autres: "fa-solid fa-brain",
+};
+
 // __________________________
 // Récupérer tous les membres
 const getAllMembers = async (request, reply) => {
@@ -20,16 +38,16 @@ async function createMember(request, reply) {
     // Récupérer les données envoyées dans la requête
     const {
       userId,
-      pseudo = "", // valeur par défaut
-      nom = "", // valeur par défaut
-      image = "", // valeur par défaut
-      tags = "", // valeur par défaut
-      shortdescription = "", // valeur par défaut
-      description = "", // valeur par défaut
-      links = {}, // valeur par défaut, un objet vide
-      content_format = "", // valeur par défaut
-      content = [], // valeur par défaut, un tableau vide
-      softDelete = true, // valeur par défaut
+      pseudo = "",
+      nom = "",
+      image = "",
+      tags = "",
+      shortdescription = "",
+      description = "",
+      links = {},
+      content_format = "",
+      content = [],
+      softDelete = true,
     } = request.body;
 
     // Vérification et traitement de 'content'
@@ -60,25 +78,23 @@ async function createMember(request, reply) {
         .send({ message: "Le format des liens est incorrect." });
     }
 
-    // Filtrer et ne garder que les liens complétés, et limiter à 3
-    const validLinks = Object.entries(parsedLinks)
-      .filter(([key, value]) => value && value.trim() !== "")
-      .slice(0, 3)
-      .reduce((acc, [key, value]) => {
-        acc[key] = value;
-        return acc;
-      }, {});
+    // Assurer que tous les liens (y compris ceux vides) soient enregistrés avec "" si non renseignés
+    const validLinks = Object.keys(SocialsLogos).reduce((acc, key) => {
+      // Si l'utilisateur a fourni un lien, l'utiliser, sinon mettre une chaîne vide ""
+      acc[key] = parsedLinks[key] || "";
+      return acc;
+    }, {});
 
     // Créer un nouveau membre sans définir explicitement l'_id
     const newMember = new Member({
-      userId, // Utiliser userId comme un champ normal
+      userId,
       pseudo,
       nom,
       image,
       tags: tags.split(",").map((tag) => tag.trim()),
       shortdescription,
       description,
-      links: validLinks,
+      links: validLinks, // Utiliser les liens traités avec toutes les clés
       content_format,
       content: parsedContent.map((item) => ({
         image: item.image || "",
@@ -86,7 +102,7 @@ async function createMember(request, reply) {
         title: item.title || "",
         description: item.description || "",
       })),
-      softDelete, // Utiliser la valeur fournie pour softDelete
+      softDelete,
     });
 
     // Sauvegarder le membre dans la base de données
