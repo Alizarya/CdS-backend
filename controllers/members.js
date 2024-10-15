@@ -138,26 +138,26 @@ async function updateMember(request, reply) {
 
     // Récupérer les données envoyées dans la requête
     const {
-      pseudo,
-      nom,
-      image,
-      tags,
-      shortdescription,
-      description,
-      links,
-      content_format,
-      content,
-      softDelete,
+      pseudo = "",
+      nom = "",
+      image = "",
+      tags = "",
+      shortdescription = "",
+      description = "",
+      links = {},
+      content_format = "",
+      content = [],
+      softDelete = true,
     } = request.body;
 
     // Assurer que softDelete est un booléen
     const isSoftDelete =
       softDelete === "true" || softDelete === true ? true : false;
 
-    // Vérification et traitement des 'tags' (doivent être un tableau)
+    // Vérification et traitement des 'tags'
     let updatedTags = [];
     if (Array.isArray(tags)) {
-      updatedTags = tags.slice(0, 3); // Garder uniquement 3 tags maximum
+      updatedTags = tags.slice(0, 3);
     }
 
     // Vérification et traitement de 'content'
@@ -174,13 +174,13 @@ async function updateMember(request, reply) {
         .send({ message: "Le format du contenu est incorrect." });
     }
 
-    // Vérification et traitement des 'links'
-    let updatedLinks = {};
+    // Vérification et traitement des links
+    let parsedLinks = {};
     try {
       if (typeof links === "string") {
-        updatedLinks = JSON.parse(links); // Parser si c'est une chaîne JSON
+        parsedLinks = JSON.parse(links);
       } else if (typeof links === "object" && links !== null) {
-        updatedLinks = links; // Si c'est déjà un objet
+        parsedLinks = links;
       }
     } catch (parseError) {
       return reply
@@ -188,14 +188,12 @@ async function updateMember(request, reply) {
         .send({ message: "Le format des liens est incorrect." });
     }
 
-    // Filtrer et ne garder que les liens complétés, et limiter à 3
-    const validLinks = Object.entries(updatedLinks)
-      .filter(([key, value]) => value && value.trim() !== "")
-      .slice(0, 3)
-      .reduce((acc, [key, value]) => {
-        acc[key] = value;
-        return acc;
-      }, {});
+    // Assurer que tous les liens (y compris ceux vides) soient enregistrés avec "" si non renseignés
+    const validLinks = Object.keys(SocialsLogos).reduce((acc, key) => {
+      // Si l'utilisateur a fourni un lien, l'utiliser, sinon mettre une chaîne vide ""
+      acc[key] = parsedLinks[key] || "";
+      return acc;
+    }, {});
 
     // Mettre à jour les champs dans la base de données
     const updatedMember = await Member.findByIdAndUpdate(
@@ -205,7 +203,7 @@ async function updateMember(request, reply) {
           pseudo,
           nom,
           image,
-          tags: updatedTags, // Utilisation des tags limités à 3
+          tags: updatedTags,
           shortdescription,
           description,
           links: validLinks,
@@ -216,7 +214,7 @@ async function updateMember(request, reply) {
             title: item.title || "",
             description: item.description || "",
           })),
-          softDelete: isSoftDelete, // Utilisation de la valeur booléenne
+          softDelete: isSoftDelete,
         },
       },
       { new: true, runValidators: true }
