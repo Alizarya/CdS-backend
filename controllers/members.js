@@ -1,4 +1,6 @@
-const Member = require("../models/member");
+// controllers/members.js
+const mongoose = require("mongoose");
+const Member = require("../models/Member");
 
 const SocialsLogos = {
   website: "fa-solid fa-globe",
@@ -18,24 +20,129 @@ const SocialsLogos = {
   autres: "fa-solid fa-brain",
 };
 
-// __________________________
-// Récupérer tous les membres
+/* ==========================
+ * Helpers (normalisation)
+ * ========================== */
+
+function normalizeTags(input, max = 3) {
+  if (!input) return [];
+  const arr = Array.isArray(input) ? input : String(input).split(",");
+  const cleaned = arr
+    .map((t) => (typeof t === "string" ? t.trim() : ""))
+    .filter((t) => t.length > 0);
+
+  // dédoublonne + borne à 3
+  return Array.from(new Set(cleaned)).slice(0, max);
+}
+
+function parseJsonIfString(value, fallback = {}) {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  if (typeof value === "object" && value !== null) return value;
+  return fallback;
+}
+
+function normalizeLinks(linksObj) {
+  const parsed = parseJsonIfString(linksObj, {});
+  return Object.keys(SocialsLogos).reduce((acc, key) => {
+    acc[key] = typeof parsed[key] === "string" ? parsed[key] : "";
+    return acc;
+  }, {});
+}
+
+function normalizeContent(content) {
+  const arr = Array.isArray(content)
+    ? content
+    : typeof content === "string"
+    ? (() => {
+        try {
+          const parsed = JSON.parse(content);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      })()
+    : [];
+
+  return arr.map((item) => ({
+    image: (item && item.image) || "",
+    link: (item && item.link) || "",
+    title: (item && item.title) || "",
+    description: (item && item.description) || "",
+  }));
+}
+
+function toBooleanLoose(val, defaultVal) {
+  if (val === undefined) return defaultVal;
+  if (val === true || val === false) return val;
+  if (typeof val === "string") {
+    const v = val.toLowerCase().trim();
+    if (v === "true") return true;
+    if (v === "false") return false;
+  }
+  return defaultVal;
+}
+
+/* ==========================
+ * GET /members  — avec email
+ * ========================== */
 const getAllMembers = async (request, reply) => {
   try {
-    const members = await Member.find();
-    return members;
+    // Optionnel : filtrer via query ?visible=true/false
+    const { visible } = request.query || {};
+    const matchStage = [];
+    if (visible === "true") matchStage.push({ $match: { softDelete: false } });
+    if (visible === "false") matchStage.push({ $match: { softDelete: true } });
+
+    const pipeline = [
+      ...matchStage,
+      {
+        $lookup: {
+          from: "users",
+          let: { uid: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  // User._id (ObjectId) -> string pour matcher Member.userId (string)
+                  $eq: [{ $toString: "$_id" }, "$$uid"],
+                },
+              },
+            },
+            { $project: { email: 1 } },
+          ],
+          as: "userInfo",
+        },
+      },
+      {
+        $addFields: {
+          email: { $ifNull: [{ $arrayElemAt: ["$userInfo.email", 0] }, ""] },
+        },
+      },
+      { $project: { userInfo: 0 } },
+      { $sort: { pseudo: 1, nom: 1, _id: 1 } },
+    ];
+
+    const members = await Member.aggregate(pipeline);
+    return reply.send(members);
   } catch (err) {
-    reply
+    console.error("Erreur lors de la récupération des membres:", err);
+    return reply
       .status(500)
       .send({ error: "Erreur lors de la récupération des membres" });
   }
 };
 
-// __________________________
-// Créer un nouveau membre
+/* ==========================
+ * POST /members
+ * ========================== */
 async function createMember(request, reply) {
   try {
-    // Récupérer les données envoyées dans la requête
     const {
       userId,
       pseudo = "",
@@ -47,254 +154,194 @@ async function createMember(request, reply) {
       links = {},
       content_format = "",
       content = [],
-      softDelete = true,
+      softDelete, // on laisse le schema gérer le défaut si non présent
     } = request.body;
 
-    // Vérification et traitement de 'content'
-    let parsedContent = [];
-    try {
-      if (typeof content === "string") {
-        parsedContent = JSON.parse(content);
-      } else if (Array.isArray(content)) {
-        parsedContent = content;
-      }
-    } catch (parseError) {
-      return reply
-        .status(400)
-        .send({ message: "Le format du contenu est incorrect." });
+    if (!userId) {
+      return reply.status(400).send({ message: "userId est requis." });
     }
 
-    // Vérification et traitement des liens
-    let parsedLinks = {};
-    try {
-      if (typeof links === "string") {
-        parsedLinks = JSON.parse(links); // Parser si c'est une chaîne JSON
-      } else if (typeof links === "object" && links !== null) {
-        parsedLinks = links; // Si c'est déjà un objet
-      }
-    } catch (parseError) {
-      return reply
-        .status(400)
-        .send({ message: "Le format des liens est incorrect." });
-    }
+    const normalizedTags = normalizeTags(tags, 3);
+    const validLinks = normalizeLinks(links);
+    const normalizedContent = normalizeContent(content);
+    const softDeleteValue = toBooleanLoose(softDelete, undefined); // undefined => défaut schema
 
-    // Assurer que tous les liens (y compris ceux vides) soient enregistrés avec "" si non renseignés
-    const validLinks = Object.keys(SocialsLogos).reduce((acc, key) => {
-      // Si l'utilisateur a fourni un lien, l'utiliser, sinon mettre une chaîne vide ""
-      acc[key] = parsedLinks[key] || "";
-      return acc;
-    }, {});
-
-    // Créer un nouveau membre sans définir explicitement l'_id
     const newMember = new Member({
       userId,
       pseudo,
       nom,
       image,
-      tags: tags.split(",").map((tag) => tag.trim()),
+      tags: normalizedTags,
       shortdescription,
       description,
-      links: validLinks, // Utiliser les liens traités avec toutes les clés
+      links: validLinks,
       content_format,
-      content: parsedContent.map((item) => ({
-        image: item.image || "",
-        link: item.link || "",
-        title: item.title || "",
-        description: item.description || "",
-      })),
-      softDelete,
+      content: normalizedContent,
+      ...(softDeleteValue !== undefined ? { softDelete: softDeleteValue } : {}),
     });
 
-    // Sauvegarder le membre dans la base de données
     await newMember.save();
 
-    // Retourner une réponse de succès
-    reply
-      .status(201)
-      .send({ message: "Membre créé avec succès", member: newMember });
+    reply.status(201).send({
+      message: "Membre créé avec succès",
+      member: newMember,
+    });
   } catch (error) {
     console.error("Erreur lors de la création du membre:", error);
 
-    // Vérifier si l'erreur est une violation d'unicité
     if (error.code === 11000) {
       return reply
         .status(400)
-        .send({ message: "L'adresse e-mail ou l'userId est déjà utilisé." });
+        .send({ message: "Conflit d'unicité (email/userId déjà utilisé ?)." });
     }
 
-    // Gérer d'autres types d'erreurs
     reply.status(500).send({
       message: "Une erreur est survenue lors de la création du membre.",
     });
   }
 }
 
-// __________________________
-// Mettre à jour un membre
+/* ==========================
+ * PATCH/PUT /members/:id
+ * ========================== */
 async function updateMember(request, reply) {
   try {
-    // Récupérer l'ID du membre à mettre à jour depuis les paramètres
     const memberId = request.params.id;
+    if (!memberId) {
+      return reply.status(400).send({ message: "ID de membre requis" });
+    }
 
-    // Récupérer les données envoyées dans la requête
+    // champs modifiables
     const {
-      pseudo = "",
-      nom = "",
-      image = "",
-      tags = "",
-      shortdescription = "",
-      description = "",
-      links = {},
-      content_format = "",
-      content = [],
-      softDelete = true,
+      pseudo,
+      nom,
+      image,
+      tags,
+      shortdescription,
+      description,
+      links,
+      content_format,
+      content,
+      softDelete, // IMPORTANT: on ne force pas à true par défaut
     } = request.body;
 
-    // Assurer que softDelete est un booléen
-    const isSoftDelete =
-      softDelete === "true" || softDelete === true ? true : false;
+    const update = {};
 
-    // Vérification et traitement des 'tags'
-    let updatedTags = [];
-    if (Array.isArray(tags)) {
-      updatedTags = tags.slice(0, 3);
+    if (pseudo !== undefined) update.pseudo = String(pseudo);
+    if (nom !== undefined) update.nom = String(nom);
+    if (image !== undefined) update.image = String(image);
+
+    if (tags !== undefined) update.tags = normalizeTags(tags, 3);
+    if (shortdescription !== undefined)
+      update.shortdescription = String(shortdescription);
+    if (description !== undefined) update.description = String(description);
+    if (links !== undefined) update.links = normalizeLinks(links);
+    if (content_format !== undefined)
+      update.content_format = String(content_format);
+    if (content !== undefined) update.content = normalizeContent(content);
+
+    if (softDelete !== undefined) {
+      update.softDelete = toBooleanLoose(softDelete, true);
     }
 
-    // Vérification et traitement de 'content'
-    let updatedContent = [];
-    try {
-      if (typeof content === "string") {
-        updatedContent = JSON.parse(content);
-      } else if (Array.isArray(content)) {
-        updatedContent = content;
-      }
-    } catch (parseError) {
-      return reply
-        .status(400)
-        .send({ message: "Le format du contenu est incorrect." });
-    }
-
-    // Vérification et traitement des links
-    let parsedLinks = {};
-    try {
-      if (typeof links === "string") {
-        parsedLinks = JSON.parse(links);
-      } else if (typeof links === "object" && links !== null) {
-        parsedLinks = links;
-      }
-    } catch (parseError) {
-      return reply
-        .status(400)
-        .send({ message: "Le format des liens est incorrect." });
-    }
-
-    // Assurer que tous les liens (y compris ceux vides) soient enregistrés avec "" si non renseignés
-    const validLinks = Object.keys(SocialsLogos).reduce((acc, key) => {
-      // Si l'utilisateur a fourni un lien, l'utiliser, sinon mettre une chaîne vide ""
-      acc[key] = parsedLinks[key] || "";
-      return acc;
-    }, {});
-
-    // Mettre à jour les champs dans la base de données
     const updatedMember = await Member.findByIdAndUpdate(
       memberId,
-      {
-        $set: {
-          pseudo,
-          nom,
-          image,
-          tags: updatedTags,
-          shortdescription,
-          description,
-          links: validLinks,
-          content_format,
-          content: updatedContent.map((item) => ({
-            image: item.image || "",
-            link: item.link || "",
-            title: item.title || "",
-            description: item.description || "",
-          })),
-          softDelete: isSoftDelete,
-        },
-      },
+      { $set: update },
       { new: true, runValidators: true }
     );
 
-    // Si le membre n'existe pas
     if (!updatedMember) {
       return reply.status(404).send({ message: "Membre non trouvé" });
     }
 
-    // Retourner une réponse de succès avec les données mises à jour
     reply.send({
       message: "Membre mis à jour avec succès",
       member: updatedMember,
     });
   } catch (error) {
     console.error("Erreur lors de la mise à jour du membre:", error);
-
-    // Gérer les autres types d'erreurs
     reply.status(500).send({
       message: "Une erreur est survenue lors de la mise à jour du membre.",
     });
   }
 }
 
-// __________________________
-// Récupérer un membre par son ID
+/* ==========================
+ * GET /members/:id  — avec email
+ * ========================== */
 async function getMember(request, reply) {
   try {
-    // Récupérer l'ID du membre à partir des paramètres
     const memberId = request.params.id;
 
-    // Chercher le membre par ID
-    const member = await Member.findById(memberId);
+    // Pipeline pour inclure l'email
+    const pipeline = [
+      { $match: { _id: new mongoose.Types.ObjectId(memberId) } },
+      {
+        $lookup: {
+          from: "users",
+          let: { uid: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: [{ $toString: "$_id" }, "$$uid"],
+                },
+              },
+            },
+            { $project: { email: 1 } },
+          ],
+          as: "userInfo",
+        },
+      },
+      {
+        $addFields: {
+          email: { $ifNull: [{ $arrayElemAt: ["$userInfo.email", 0] }, ""] },
+        },
+      },
+      { $project: { userInfo: 0 } },
+      { $limit: 1 },
+    ];
 
-    // Si le membre n'existe pas, retourner une réponse 404
+    const result = await Member.aggregate(pipeline);
+    const member = result[0];
+
     if (!member) {
       return reply.status(404).send({ message: "Membre non trouvé" });
     }
 
-    // Retourner le membre trouvé
     reply.send({ message: "Membre trouvé", member });
   } catch (error) {
     console.error("Erreur lors de la récupération du membre:", error);
 
-    // Vérifier si l'erreur est liée à un ID invalide
     if (error.name === "CastError") {
       return reply.status(400).send({ message: "ID de membre invalide" });
     }
 
-    // Gérer les autres types d'erreurs
     reply.status(500).send({
       message: "Une erreur est survenue lors de la récupération du membre.",
     });
   }
 }
 
-// __________________________
-// Supprimer un membre par son ID
+/* ==========================
+ * DELETE /members/:id
+ * ========================== */
 async function deleteMember(request, reply) {
-  const { id } = request.params; // Obtenez l'ID du membre depuis les paramètres de la requête
+  const { id } = request.params;
 
   try {
-    // Validation du format de l'ID (facultatif)
     if (!id) {
       return reply.status(400).send({ message: "L'ID du membre est requis" });
     }
 
-    // Tentez de trouver et de supprimer le membre
     const deletedMember = await Member.findByIdAndDelete(id);
 
-    // Vérifiez si le membre a été trouvé et supprimé
     if (!deletedMember) {
       return reply.status(404).send({ message: "Membre non trouvé" });
     }
 
-    // Répondez avec un message de succès
     reply.send({ message: "Membre supprimé avec succès" });
   } catch (error) {
-    // Gérez les erreurs qui surviennent pendant le processus de suppression
     console.error("Erreur lors de la suppression du membre :", error);
     reply.status(500).send({
       message: "Une erreur est survenue lors de la suppression du membre",

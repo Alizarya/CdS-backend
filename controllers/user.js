@@ -59,20 +59,22 @@ async function signup(request, reply) {
     // Envoi de l'e-mail de confirmation d'inscription
     try {
       const transporter = nodemailer.createTransport({
-        service: "gmail",
+        host: "cafe-sciences.org", // Hôte SMTP
+        port: 465, // Port pour SSL
+        secure: true, // Utilisation de SSL/TLS
         auth: {
-          user: process.env.SMTP_MAIL,
-          pass: process.env.SMTP_PASSWORD,
+          user: process.env.SMTP_MAIL, // Nom d'utilisateur
+          pass: process.env.SMTP_PASSWORD, // Mot de passe
         },
       });
 
       const mailOptions = {
-        from: "Le café des sciences",
+        from: '"Le café des sciences" <no-reply@cafe-sciences.org>',
         to: email,
         subject: "Confirmation d'inscription",
         html: `
         <p>Bonjour, votre inscription sur le site du café des sciences a bien été prise en compte !</p>
-        <p>Vous pouvez désormais vous connecter en <a href="http://localhost:3000/Login">cliquant ici</a>.</p>
+        <p>Vous pouvez désormais vous connecter en <a href="https://new.cafe-sciences.org/login">cliquant ici</a>.</p>
         `,
       };
 

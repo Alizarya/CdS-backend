@@ -49,7 +49,6 @@ mongoose
   })
   .then(() => {
     console.log("Connexion à MongoDB avec Mongoose réussie !");
-    start();
   })
   .catch((err) => {
     console.error("Erreur de connexion à MongoDB avec Mongoose :", err);
@@ -95,25 +94,16 @@ fastify.get("/", async (request, reply) => {
   return { message: "Le serveur te sert le café" };
 });
 
-// Configuration du lancement du serveur en fonction de l'environnement
+// Démarrage du serveur
 const start = async () => {
   try {
-    // Si passenger, se lance avec
-    if (typeof PhusionPassenger !== "undefined") {
-      PhusionPassenger.configure({ autoInstall: false });
-      await fastify.listen({ path: "passenger" });
-      console.log("Le serveur sert le café sur Passenger");
-    } else {
-      // Sinon port 5000
-      if (!fastify.server.listening) {
-        await fastify.listen({ port: 5000 });
-        console.log("Le serveur sert le café sur le port 5000");
-      }
-    }
+    await fastify.listen({ port: 5000 });
+    //await fastify.listen({ path: "passenger" });
   } catch (err) {
-    console.error("Erreur lors du démarrage du serveur :", err);
+    fastify.log.error(err);
     process.exit(1);
   }
+  console.log("Le serveur est prêt à te servir un café");
 };
 
 start();

@@ -18,7 +18,7 @@ async function contact(request, reply) {
 
     const mailOptions = {
       from: contactFixed.email,
-      to: process.env.SMTP_MAIL,
+      to: process.env.MAIL_ORG,
       subject: `Message de ${contactFixed.name}: ${contactFixed.subject}`,
       text: contactMessage.message,
       replyTo: contactFixed.email,
