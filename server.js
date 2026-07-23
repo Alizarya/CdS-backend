@@ -21,6 +21,11 @@ const fastify = require("fastify")({
 const path = require("path");
 const fastifyStatic = require("@fastify/static");
 
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, "public"),
+  prefix: "/",
+});
+
 // Gestion de swagger
 fastify.register(require("@fastify/swagger"), {
   openapi: {
@@ -89,6 +94,7 @@ fastify.register(fastifyCors, {
   origin: (origin, cb) => {
     const allowedOrigins = [
       "https://www.cafe-sciences.org",
+      "https://cafe-sciences.org",
       "http://localhost:3000",
     ];
     // Si pas d'origine (Postman, curl) ou l'origine est dans la liste

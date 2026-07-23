@@ -10,25 +10,27 @@ async function contact(request, reply) {
     const { contactFixed, contactMessage } = request.body;
 
     const mailOptions = {
-      from: `"${contactFixed.name}" <${process.env.SMTP_MAIL}>`,
+      from: process.env.SMTP_MAIL,
       to: process.env.MAIL_ORG,
+      replyTo: contactFixed.email,
       subject: `Message de ${contactFixed.name} : ${contactFixed.subject}`,
       text: contactMessage.message,
-      replyTo: contactFixed.email,
     };
 
     const info = await transporter.sendMail(mailOptions);
 
     console.log("Email envoyé :", info.messageId);
 
-    reply.send({
+    return reply.send({
+      success: true,
       message: "Email envoyé avec succès",
     });
   } catch (error) {
-    console.error("Erreur lors de l'envoi de l'email :", error);
+    console.error(error);
 
-    reply.status(500).send({
-      message: "Erreur lors de l'envoi de l'email",
+    return reply.status(500).send({
+      success: false,
+      message: error.message,
     });
   }
 }
@@ -37,18 +39,66 @@ async function contact(request, reply) {
 // Mail de candidature
 
 async function candidacy(request, reply) {
-  reply.send({
-    message: "route ok - candidacy",
-  });
+  try {
+    const { contactFixed, contactMessage } = request.body;
+
+    const mailOptions = {
+      from: process.env.SMTP_MAIL,
+      to: process.env.MAIL_ORG,
+      replyTo: contactFixed.email,
+      subject: contactFixed.subject,
+      text: contactMessage.message,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Email envoyé :", info.messageId);
+
+    return reply.send({
+      success: true,
+      message: "Candidature envoyée.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return reply.status(500).send({
+      success: false,
+      message: error.message,
+    });
+  }
 }
 
 //_____________________________________________________________________
 // Mail de parrainage / marrainage
 
 async function sponsorship(request, reply) {
-  reply.send({
-    message: "route ok - sponsorship",
-  });
+  try {
+    const { contactFixed, contactMessage } = request.body;
+
+    const mailOptions = {
+      from: process.env.SMTP_MAIL,
+      to: process.env.MAIL_ORG,
+      replyTo: contactFixed.email,
+      subject: contactFixed.subject,
+      text: contactMessage.message,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Email envoyé :", info.messageId);
+
+    return reply.send({
+      success: true,
+      message: "Demande envoyée.",
+    });
+  } catch (error) {
+    console.error(error);
+
+    return reply.status(500).send({
+      success: false,
+      message: error.message,
+    });
+  }
 }
 
 module.exports = {

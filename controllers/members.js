@@ -2,6 +2,11 @@
 const mongoose = require("mongoose");
 const Member = require("../models/Member");
 
+const {
+  saveMemberImage,
+  deleteMemberImage,
+} = require("../services/imageService");
+
 const SocialsLogos = {
   website: "fa-solid fa-globe",
   blog: "fa-solid fa-square-pen",
@@ -59,15 +64,15 @@ function normalizeContent(content) {
   const arr = Array.isArray(content)
     ? content
     : typeof content === "string"
-    ? (() => {
-        try {
-          const parsed = JSON.parse(content);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      })()
-    : [];
+      ? (() => {
+          try {
+            const parsed = JSON.parse(content);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })()
+      : [];
 
   return arr.map((item) => ({
     image: (item && item.image) || "",
@@ -154,7 +159,7 @@ async function createMember(request, reply) {
       links = {},
       content_format = "",
       content = [],
-      softDelete, // on laisse le schema gérer le défaut si non présent
+      softDelete,
     } = request.body;
 
     if (!userId) {
@@ -164,13 +169,16 @@ async function createMember(request, reply) {
     const normalizedTags = normalizeTags(tags, 3);
     const validLinks = normalizeLinks(links);
     const normalizedContent = normalizeContent(content);
-    const softDeleteValue = toBooleanLoose(softDelete, undefined); // undefined => défaut schema
+    const softDeleteValue = toBooleanLoose(softDelete, undefined);
+
+    // Conversion de l'image en WebP si nécessaire
+    const imagePath = await saveMemberImage(image);
 
     const newMember = new Member({
       userId,
       pseudo,
       nom,
-      image,
+      image: imagePath,
       tags: normalizedTags,
       shortdescription,
       description,
@@ -190,9 +198,15 @@ async function createMember(request, reply) {
     console.error("Erreur lors de la création du membre:", error);
 
     if (error.code === 11000) {
-      return reply
-        .status(400)
-        .send({ message: "Conflit d'unicité (email/userId déjà utilisé ?)." });
+      return reply.status(400).send({
+        message: "Conflit d'unicité (email/userId déjà utilisé ?).",
+      });
+    }
+
+    if (error.message === "Image invalide ou corrompue.") {
+      return reply.status(400).send({
+        message: error.message,
+      });
     }
 
     reply.status(500).send({
@@ -207,11 +221,18 @@ async function createMember(request, reply) {
 async function updateMember(request, reply) {
   try {
     const memberId = request.params.id;
+
     if (!memberId) {
       return reply.status(400).send({ message: "ID de membre requis" });
     }
 
-    // champs modifiables
+    // Récupération du membre actuel
+    const member = await Member.findById(memberId);
+
+    if (!member) {
+      return reply.status(404).send({ message: "Membre non trouvé" });
+    }
+
     const {
       pseudo,
       nom,
@@ -222,23 +243,47 @@ async function updateMember(request, reply) {
       links,
       content_format,
       content,
-      softDelete, // IMPORTANT: on ne force pas à true par défaut
+      softDelete,
     } = request.body;
 
     const update = {};
 
     if (pseudo !== undefined) update.pseudo = String(pseudo);
     if (nom !== undefined) update.nom = String(nom);
-    if (image !== undefined) update.image = String(image);
 
-    if (tags !== undefined) update.tags = normalizeTags(tags, 3);
-    if (shortdescription !== undefined)
+    if (image !== undefined) {
+      const newImage = await saveMemberImage(image);
+
+      if (newImage !== member.image) {
+        await deleteMemberImage(member.image);
+      }
+
+      update.image = newImage;
+    }
+
+    if (tags !== undefined) {
+      update.tags = normalizeTags(tags, 3);
+    }
+
+    if (shortdescription !== undefined) {
       update.shortdescription = String(shortdescription);
-    if (description !== undefined) update.description = String(description);
-    if (links !== undefined) update.links = normalizeLinks(links);
-    if (content_format !== undefined)
+    }
+
+    if (description !== undefined) {
+      update.description = String(description);
+    }
+
+    if (links !== undefined) {
+      update.links = normalizeLinks(links);
+    }
+
+    if (content_format !== undefined) {
       update.content_format = String(content_format);
-    if (content !== undefined) update.content = normalizeContent(content);
+    }
+
+    if (content !== undefined) {
+      update.content = normalizeContent(content);
+    }
 
     if (softDelete !== undefined) {
       update.softDelete = toBooleanLoose(softDelete, true);
@@ -247,12 +292,11 @@ async function updateMember(request, reply) {
     const updatedMember = await Member.findByIdAndUpdate(
       memberId,
       { $set: update },
-      { new: true, runValidators: true }
+      {
+        new: true,
+        runValidators: true,
+      },
     );
-
-    if (!updatedMember) {
-      return reply.status(404).send({ message: "Membre non trouvé" });
-    }
 
     reply.send({
       message: "Membre mis à jour avec succès",
@@ -260,6 +304,13 @@ async function updateMember(request, reply) {
     });
   } catch (error) {
     console.error("Erreur lors de la mise à jour du membre:", error);
+
+    if (error.message === "Image invalide ou corrompue.") {
+      return reply.status(400).send({
+        message: error.message,
+      });
+    }
+
     reply.status(500).send({
       message: "Une erreur est survenue lors de la mise à jour du membre.",
     });

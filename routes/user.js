@@ -60,7 +60,9 @@ async function routes(fastify, options) {
             minLength: 8,
             pattern: "^(?=.*[A-Z])(?=.*[0-9]).{8,}$",
           },
-          radioButtonChecked: { type: "string" },
+          radioButtonChecked: {
+            type: "boolean",
+          },
         },
       },
       response: {
