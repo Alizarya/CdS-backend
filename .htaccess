@@ -1,0 +1,8 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/dave7563/api.cafe-sciences.org"
+PassengerBaseURI "/"
+PassengerNodejs "/home/dave7563/nodevenv/api.cafe-sciences.org/16/bin/node"
+PassengerAppType node
+PassengerStartupFile server.js
+PassengerAppLogFile "/home/dave7563/logs/apicafe"
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END

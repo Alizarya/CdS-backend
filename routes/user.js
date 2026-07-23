@@ -77,6 +77,12 @@ async function routes(fastify, options) {
         500: { type: "object", properties: { message: { type: "string" } } },
       },
     },
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: "1 hour",
+      },
+    },
     handler: userController.signup,
   });
 
@@ -150,6 +156,12 @@ async function routes(fastify, options) {
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: "15 minutes",
+      },
+    },
     handler: userController.login,
   });
 
@@ -205,12 +217,18 @@ async function routes(fastify, options) {
         },
       },
     },
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: "1 hour",
+      },
+    },
     handler: userController.mailToResetPassword,
   });
 
   //____________________________________________
   // Route pour réinitialiser le mot de passe perdu
-  fastify.patch("/user/reset-password", {
+  fastify.put("/user/reset-password", {
     schema: {
       description:
         "Permet à un utilisateur de réinitialiser son mot de passe perdu en utilisant un lien de réinitialisation.",
@@ -287,7 +305,7 @@ async function routes(fastify, options) {
 
   //____________________________________________
   // Route pour mettre à jour le mot de passe
-  fastify.patch("/user/update-password", {
+  fastify.put("/user/update-password", {
     schema: {
       description:
         "Route pour permettre à un ou une membre de mettre à jour son mot de passe.",
@@ -300,7 +318,7 @@ async function routes(fastify, options) {
 
   //____________________________________________
   // Route pour mettre à jour l'email
-  fastify.patch("/user/update-email", {
+  fastify.put("/user/update-email", {
     schema: {
       description:
         "Route pour permettre à un ou une membre de mettre à jour son adresse email.",

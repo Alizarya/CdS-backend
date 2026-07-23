@@ -1,5 +1,21 @@
 // Import du framework
-const fastify = require("fastify")({ logger: true });
+const fastify = require("fastify")({
+  logger: {
+    level: "info",
+
+    redact: {
+      paths: [
+        "req.headers.authorization",
+        "req.body.password",
+        "req.body.resetToken",
+        "req.body.newPassword",
+        "req.body.token",
+        "res.headers['set-cookie']",
+      ],
+      censor: "[REDACTED]",
+    },
+  },
+});
 
 // Import des éléments pour les fichiers statiques
 const path = require("path");
@@ -11,8 +27,20 @@ fastify.register(require("@fastify/swagger"), {
     info: {
       title: "Le Café des Sciences",
       description:
-        "Documentation des routes API de l'application backend du café des sciences",
+        "Documentation des routes API de l'application backend du Café des Sciences",
       version: "1.0.0",
+    },
+
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description:
+            "Saisissez uniquement votre token JWT, sans le préfixe 'Bearer '.",
+        },
+      },
     },
   },
 });
@@ -56,32 +84,46 @@ mongoose
 
 // Gestion du cors
 const fastifyCors = require("@fastify/cors");
+
 fastify.register(fastifyCors, {
-  origin: ["*"], // Ajouter ici la future origine quand je l'aurai
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: (origin, cb) => {
+    const allowedOrigins = [
+      "https://www.cafe-sciences.org",
+      "http://localhost:3000",
+    ];
+    // Si pas d'origine (Postman, curl) ou l'origine est dans la liste
+    if (!origin || allowedOrigins.includes(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 });
 
 // Sécuriser contre le DDoS
 const fastifyRateLimit = require("@fastify/rate-limit");
-const postRateLimit = (req, res, done) => {
-  if (req.raw.method === "POST") {
-    done();
-  } else {
-    done(null);
-  }
-};
 
 fastify.register(fastifyRateLimit, {
   global: false,
-  max: 1,
-  timeWindow: "20 seconds",
   skipOnError: true,
-  skip: postRateLimit,
+  errorResponseBuilder(request, context) {
+    return {
+      code: 429,
+      error: "Too Many Requests",
+      message: "Trop de tentatives. Veuillez réessayer dans quelques minutes.",
+    };
+  },
 });
 
 // Utilisation de Fastify Helmet pour sécuriser l'application
-// fastify.register(fastifyHelmet);
-// à configurer
+const fastifyHelmet = require("@fastify/helmet");
+
+fastify.register(fastifyHelmet, {
+  contentSecurityPolicy: false,
+});
 
 // Import des routes
 fastify.register(require("./routes/user"));
@@ -92,6 +134,35 @@ fastify.register(require("./routes/members"));
 // Route du serveur
 fastify.get("/", async (request, reply) => {
   return { message: "Le serveur te sert le café" };
+});
+
+// Gestionnaire global des erreurs
+fastify.setErrorHandler((error, request, reply) => {
+  // Journalise l'erreur complète
+  request.log.error(error);
+
+  // Erreur de validation Fastify
+  if (error.validation) {
+    return reply.status(400).send({
+      success: false,
+      message: "Les données envoyées sont invalides.",
+      errors: error.validation,
+    });
+  }
+
+  // Erreur HTTP connue
+  if (error.statusCode) {
+    return reply.status(error.statusCode).send({
+      success: false,
+      message: error.message,
+    });
+  }
+
+  // Erreur inattendue
+  return reply.status(500).send({
+    success: false,
+    message: "Une erreur interne est survenue.",
+  });
 });
 
 // Démarrage du serveur

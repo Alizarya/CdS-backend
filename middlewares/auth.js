@@ -1,26 +1,44 @@
-// Charger la variable d'environnement
+// Chargement des variables d'environnement
 require("dotenv").config();
 
-// Import de la clef secrète
-const secretKey = process.env.SECRET_KEY;
-
-// Import de jwt
 const jwt = require("jsonwebtoken");
 
-module.exports = (req, reply, next) => {
+const secretKey = process.env.JWT_SECRET;
+
+module.exports = (request, reply, done) => {
   try {
-    // Extraction du token JWT dans le header `Authorization`
-    const token = req.headers.authorization.split(" ")[1];
-    // Vérification de la validité du token
+    // Vérifie que le header Authorization est présent
+    const authorization = request.headers.authorization;
+
+    if (!authorization) {
+      return reply.status(401).send({
+        error: "Token d'authentification manquant.",
+      });
+    }
+
+    // Vérifie le format "Bearer <token>"
+    const parts = authorization.split(" ");
+
+    if (parts.length !== 2 || parts[0] !== "Bearer") {
+      return reply.status(401).send({
+        error: "Format du token invalide.",
+      });
+    }
+
+    const token = parts[1];
+
+    // Vérification du JWT
     const decodedToken = jwt.verify(token, secretKey);
-    // Récupération de l'ID de l'utilisateur à partir du token décodé
-    const userId = decodedToken.userId;
-    // Ajout de l'ID de l'utilisateur authentifié à l'objet `auth` de la requête
-    req.auth = {
-      userId: userId,
+
+    // Ajout des informations utilisateur à la requête
+    request.auth = {
+      userId: decodedToken.userId,
     };
-    next(); // Appel du middleware suivant
+
+    done();
   } catch (error) {
-    reply.status(401).send({ error: "Unauthorized" }); // Fastify utilise `send()` au lieu de `json()`
+    return reply.status(401).send({
+      error: "Token invalide ou expiré.",
+    });
   }
 };

@@ -3,29 +3,29 @@ const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const transporter = require("../services/mailer");
 
 //_____________________________________________________________________
-// POUR MES TESTS
+// POUR LES TESTS
 function test() {
-  return { message: "route GET user fonctionnelle et valide avec controller" };
+  return { message: "Route GET /user fonctionnelle et valide avec controller" };
 }
 
 //_____________________________________________________________________
 // Gestion de l'inscription d'un user
 
-// Regex pour validation du mot de passe
 const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
 
 async function signup(request, reply) {
-  const { code, email, password, radioButtonChecked } = request.body;
+  const { code, password, radioButtonChecked } = request.body;
+  const email = request.body.email?.trim().toLowerCase();
 
-  // Validation des données
   if (!code || !email || !password || !radioButtonChecked) {
-    return reply.code(400).send({ message: "Champs requis manquants" });
+    return reply.code(400).send({
+      message: "Champs requis manquants",
+    });
   }
 
-  // Validation du mot de passe
   if (!passwordRegex.test(password)) {
     return reply.code(400).send({
       message:
@@ -34,118 +34,104 @@ async function signup(request, reply) {
   }
 
   try {
-    // Vérification du code d'inscription
-    const signupCode = process.env.SIGNUP_CODE;
-
-    if (code !== signupCode) {
+    if (code !== process.env.SIGNUP_CODE) {
       return reply.code(403).send({
         message:
-          "Code d'inscription incorrect, rapprochez vous du bureau de l'association pour obtenir un code valide.",
+          "Code d'inscription incorrect, rapprochez-vous du bureau de l'association pour obtenir un code valide.",
       });
     }
 
-    // Hashage du mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Création d'une nouvelle instance User
     const newUser = new User({
       email,
       password: hashedPassword,
     });
 
-    // Enregistrement dans la base de données
     const savedUser = await newUser.save();
 
-    // Envoi de l'e-mail de confirmation d'inscription
     try {
-      const transporter = nodemailer.createTransport({
-        host: "cafe-sciences.org", // Hôte SMTP
-        port: 465, // Port pour SSL
-        secure: true, // Utilisation de SSL/TLS
-        auth: {
-          user: process.env.SMTP_MAIL, // Nom d'utilisateur
-          pass: process.env.SMTP_PASSWORD, // Mot de passe
-        },
-      });
-
       const mailOptions = {
         from: '"Le café des sciences" <no-reply@cafe-sciences.org>',
         to: email,
         subject: "Confirmation d'inscription",
         html: `
-        <p>Bonjour, votre inscription sur le site du café des sciences a bien été prise en compte !</p>
-        <p>Vous pouvez désormais vous connecter en <a href="https://new.cafe-sciences.org/login">cliquant ici</a>.</p>
+          <p>Bonjour,</p>
+
+          <p>Votre inscription sur le site du Café des Sciences a bien été prise en compte.</p>
+
+          <p>
+            Vous pouvez désormais vous connecter en
+            <a href="https://cafe-sciences.org/login">cliquant ici</a>.
+          </p>
         `,
       };
 
       await transporter.sendMail(mailOptions);
-
-      reply.code(200).send({ message: "Inscription réussie", user: savedUser });
-    } catch (error) {
+    } catch (mailError) {
+      // Le compte est déjà créé : on journalise simplement l'erreur.
       console.error(
-        "Erreur lors de l'envoi de l'e-mail de confirmation :",
-        error
+        "Erreur lors de l'envoi du mail de confirmation :",
+        mailError,
       );
-      reply.code(500).send({ message: "Erreur lors de l'inscription" });
     }
-    reply.code(200).send({ message: "Inscription réussie", user: savedUser });
+
+    return reply.code(201).send({
+      message: "Inscription réussie.",
+      user: {
+        id: savedUser._id,
+        email: savedUser.email,
+      },
+    });
   } catch (error) {
-    if (
-      error.name === "ValidationError" &&
-      error.errors &&
-      error.errors.email
-    ) {
-      return reply
-        .code(409)
-        .send({ message: "Cet e-mail est déjà enregistré." });
-    } else {
-      console.error("Erreur lors de l'enregistrement :", error);
-      reply.code(500).send({ message: "Erreur lors de l'inscription" });
+    console.error("Erreur lors de l'inscription :", error);
+
+    if (error.name === "ValidationError" || error.code === 11000) {
+      return reply.code(409).send({
+        message: "Cet e-mail est déjà enregistré.",
+      });
     }
+
+    return reply.code(500).send({
+      message: "Erreur lors de l'inscription.",
+    });
   }
 }
 
+//_____________________________________________________________________
 // Gestion de la connexion du user
-async function login(request, reply) {
-  const { email, password } = request.body;
 
-  // Vérification des données requises
+async function login(request, reply) {
+  const { password } = request.body;
+  const email = request.body.email?.trim().toLowerCase();
+
   if (!email || !password) {
-    return reply
-      .code(400)
-      .send({ message: "Veuillez fournir l'email et le mot de passe." });
+    return reply.code(400).send({
+      message: "Veuillez fournir l'email et le mot de passe.",
+    });
   }
 
   try {
-    // Recherche par email dans la BDD
     const user = await User.findOne({ email });
-    console.log("User trouvé :", user);
 
-    // Vérification si l'utilisateurice existe
     if (!user) {
-      return reply
-        .code(401)
-        .send({ message: "Adresse e-mail ou mot de passe incorrect." });
+      return reply.code(401).send({
+        message: "Adresse e-mail ou mot de passe incorrect.",
+      });
     }
 
-    // Vérification du mot de passe avec bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return reply
-        .code(401)
-        .send({ message: "Adresse e-mail ou mot de passe incorrect." });
+      return reply.code(401).send({
+        message: "Adresse e-mail ou mot de passe incorrect.",
+      });
     }
 
-    // Génération du JWT valide pendant une heure
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "60m",
+      expiresIn: process.env.JWT_EXPIRES_IN || "60m",
     });
 
-    // Log de l'ID avant de l'envoyer
-    console.log("UserID à renvoyer :", user._id);
-
-    // Renvoi de la réponse avec le token et l'ID
     reply.send({
       message: "Connexion réussie",
       token,
@@ -153,137 +139,52 @@ async function login(request, reply) {
     });
   } catch (error) {
     console.error("Erreur lors de la connexion :", error);
-    reply.code(500).send({ message: "Erreur lors de la connexion" });
+
+    reply.code(500).send({
+      message: "Erreur lors de la connexion.",
+    });
   }
 }
 
 //_____________________________________________________________________
 // Gestion de l'envoi du mail pour mot de passe perdu
-
 async function mailToResetPassword(request, reply) {
-  const { email } = request.body;
-
-  // Génération d'un token unique
+  const email = request.body.email?.trim().toLowerCase();
   const resetToken = crypto.randomBytes(20).toString("hex");
 
   try {
-    // Recherche de l'utilisateur par email
     const user = await User.findOne({ email });
 
     if (!user) {
-      return reply.code(404).send({ message: "Utilisateur non trouvé." });
+      return reply.send({
+        message:
+          "Si cette adresse existe, un e-mail de réinitialisation a été envoyé.",
+      });
     }
 
-    // Enregistrez le token et sa date d'expiration pour l'utilisateur
     user.resetToken = resetToken;
-    user.resetTokenExpiration = Date.now() + 3600000;
+    user.resetTokenExpiration = Date.now() + 3600000; // 1 heure
 
-    // Sauvegarde des modifications dans la base de données
     await user.save();
 
-    // Configuration pour l'envoi d'email
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.SMTP_MAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
+    const resetLink = `https://www.cafe-sciences.org/ResetPassword/${resetToken}`;
 
-    // Création du lien de réinitialisation avec le token généré
-    const resetLink = `http://localhost:3000/ResetPassword/${resetToken}`;
-
-    // Envoi de l'email avec le lien de réinitialisation au format HTML
     const mailOptions = {
-      from: "Le café des sciences",
+      from: '"Le café des sciences" <no-reply@cafe-sciences.org>',
       to: email,
       subject: "Réinitialisation du mot de passe",
       html: `
-        <p>Pour réinitialiser votre mot de passe, veuillez cliquer sur le lien suivant : <a href="${resetLink}">${resetLink}</a></p>
-        <p>Vous avez une heure pour changer votre mot de passe</p>
-        <p>Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer cet email.</p>
-      `,
-    };
+        <p>Pour réinitialiser votre mot de passe, veuillez cliquer sur le lien suivant :</p>
 
-    // Envoi de l'email
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email de réinitialisation envoyé :", info.messageId);
+        <p>
+          <a href="${resetLink}">
+            ${resetLink}
+          </a>
+        </p>
 
-    // Réponse pour email envoyé avec succès
-    reply.send({ message: "Email de réinitialisation de mot de passe envoyé" });
-  } catch (error) {
-    console.error(
-      "Erreur lors de l'envoi de l'email de réinitialisation :",
-      error
-    );
-    reply.code(500).send({
-      message: "Erreur lors de l'envoi de l'email de réinitialisation",
-    });
-  }
-}
+        <p>Vous disposez d'une heure pour modifier votre mot de passe.</p>
 
-//_____________________________________________________________________
-// Gestion de la réinitialisarion du mot de passe
-async function resetPassword(request, reply) {
-  const { resetToken, email, password } = request.body;
-
-  try {
-    // Recherche de l'utilisateur dans la base de données par le resetToken et l'email
-    const user = await User.findOne({ resetToken, email });
-
-    if (!user) {
-      return reply
-        .code(404)
-        .send({ message: "Utilisateur ou utilisatrice non trouvée." });
-    }
-
-    // Vérification validité resetToken
-    if (user.resetTokenExpiration < Date.now()) {
-      return reply.code(400).send({
-        message: "Le lien de réinitialisation du mot de passe a expiré.",
-      });
-    }
-
-    // Vérification du format du nouveau mot de passe
-    const regex = /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
-    if (!regex.test(password)) {
-      return reply.code(400).send({
-        message:
-          "Le mot de passe doit contenir au moins 8 caractères, dont au moins une majuscule et un chiffre.",
-      });
-    }
-
-    // Hasher le nouveau mot de passe
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Mettre à jour le mot de passe de l'utilisateur
-    user.password = hashedPassword;
-
-    // Supprimer le resetToken une fois utilisé
-    user.resetToken = null;
-    user.resetTokenExpiration = null;
-
-    // Enregistrer les modifications dans la base de données
-    await user.save();
-
-    // Envoi du mail de confirmation
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.SMTP_MAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-
-    // Envoi de l'e-mail de confirmation
-    const mailOptions = {
-      from: "Le café des sciences",
-      to: email,
-      subject: "Confirmation de réinitialisation de mot de passe",
-      html: `
-        <p>Votre mot de passe a été réinitialisé avec succès.</p>
-        <p>Vous pouvez maintenant vous connecter à votre compte en utilisant votre nouveau mot de passe.</p>
-        <p>Si vous n'êtes pas à l'origine de cette demande, veuillez contacter le bureau de l'association.</p>
+        <p>Si vous n'êtes pas à l'origine de cette demande, vous pouvez simplement ignorer cet e-mail.</p>
       `,
     };
 
@@ -291,43 +192,116 @@ async function resetPassword(request, reply) {
 
     reply.send({
       message:
-        "Mot de passe réinitialisé avec succès, un mail vient de vous être envoyé.",
+        "Si cette adresse existe, un e-mail de réinitialisation a été envoyé.",
     });
   } catch (error) {
     console.error(
-      "Erreur lors de la réinitialisation du mot de passe :",
-      error
+      "Erreur lors de l'envoi de l'email de réinitialisation :",
+      error,
     );
-    reply
-      .code(500)
-      .send({ message: "Erreur lors de la réinitialisation du mot de passe" });
+
+    reply.code(500).send({
+      message: "Erreur lors de l'envoi de l'email de réinitialisation.",
+    });
   }
 }
 
 //_____________________________________________________________________
-// Gestion de la mise à jour du mot de passe
+// Gestion de la réinitialisation du mot de passe
+
+async function resetPassword(request, reply) {
+  const { resetToken, password } = request.body;
+  const email = request.body.email?.trim().toLowerCase();
+
+  try {
+    const user = await User.findOne({
+      resetToken,
+      email,
+    });
+
+    if (!user) {
+      return reply.code(404).send({
+        message: "Utilisateur ou utilisatrice non trouvé(e).",
+      });
+    }
+
+    if (!user.resetTokenExpiration || user.resetTokenExpiration < Date.now()) {
+      return reply.code(400).send({
+        message: "Le lien de réinitialisation du mot de passe a expiré.",
+      });
+    }
+
+    if (!passwordRegex.test(password)) {
+      return reply.code(400).send({
+        message:
+          "Le mot de passe doit contenir au moins 8 caractères, dont au moins une majuscule et un chiffre.",
+      });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = null;
+    user.resetTokenExpiration = null;
+
+    await user.save();
+
+    const mailOptions = {
+      from: '"Le café des sciences" <no-reply@cafe-sciences.org>',
+      to: email,
+      subject: "Confirmation de réinitialisation de mot de passe",
+      html: `
+        <p>Votre mot de passe a été réinitialisé avec succès.</p>
+
+        <p>
+          Vous pouvez maintenant vous connecter à votre compte
+          avec votre nouveau mot de passe.
+        </p>
+
+        <p>
+          Si vous n'êtes pas à l'origine de cette demande,
+          veuillez contacter le bureau de l'association.
+        </p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    reply.send({
+      message:
+        "Mot de passe réinitialisé avec succès. Un e-mail de confirmation vient de vous être envoyé.",
+    });
+  } catch (error) {
+    console.error(
+      "Erreur lors de la réinitialisation du mot de passe :",
+      error,
+    );
+
+    reply.code(500).send({
+      message: "Erreur lors de la réinitialisation du mot de passe.",
+    });
+  }
+}
+
+//_____________________________________________________________________
+// Mise à jour du mot de passe (utilisateur connecté)
+
 async function updatePassword(request, reply) {
   const { email, password } = request.body;
 
-  // Logique pour mettre à jour le mdp ici
-
-  // Logique pour envoyer un e-mail de confirmation ici
-
+  // TODO: ajouter la logique réelle pour mettre à jour le mot de passe
   reply.send({ message: "Mot de passe mis à jour avec succès" });
 }
 
 //_____________________________________________________________________
-// Contrôleur pour mettre à jour l'email
+// Mise à jour de l'email (utilisateur connecté)
+
 async function updateEmail(request, reply) {
   const { email, password } = request.body;
 
-  // Logique pour mettre à jour l'email ici
-
-  // Logique pour envoyer un e-mail de confirmation ici
-
+  // TODO: ajouter la logique réelle pour mettre à jour l'email
   reply.send({ message: "Email mis à jour avec succès" });
 }
 
+//_____________________________________________________________________
 module.exports = {
   test,
   signup,

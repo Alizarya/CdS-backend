@@ -1,50 +1,105 @@
 const mongoose = require("mongoose");
-const uniqueValidator = require("mongoose-unique-validator");
 
-// Sous-modèle pour les liens
-const linkSchema = mongoose.Schema({
-  website: String,
-  blog: String,
-  youtube: String,
-  twitch: String,
-  tiktok: String,
-  twitter: String,
-  bluesky: String,
-  mastodon: String,
-  facebook: String,
-  instagram: String,
-  threads: String,
-  linkedin: String,
-  podcast: String,
-  financement: String,
-  autres: String,
-});
+// Sous-modèle pour les réseaux sociaux
+const linkSchema = new mongoose.Schema(
+  {
+    website: { type: String, default: "" },
+    blog: { type: String, default: "" },
+    youtube: { type: String, default: "" },
+    twitch: { type: String, default: "" },
+    tiktok: { type: String, default: "" },
+    twitter: { type: String, default: "" },
+    bluesky: { type: String, default: "" },
+    mastodon: { type: String, default: "" },
+    facebook: { type: String, default: "" },
+    instagram: { type: String, default: "" },
+    threads: { type: String, default: "" },
+    linkedin: { type: String, default: "" },
+    podcast: { type: String, default: "" },
+    financement: { type: String, default: "" },
+    autres: { type: String, default: "" },
+  },
+  { _id: false },
+);
 
 // Sous-modèle pour le contenu
-const contentSchema = mongoose.Schema({
-  image: String,
-  link: String,
-  title: String,
-  description: String,
-});
+const contentSchema = new mongoose.Schema(
+  {
+    image: { type: String, default: "" },
+    link: { type: String, default: "" },
+    title: { type: String, default: "" },
+    description: { type: String, default: "" },
+  },
+  { _id: false },
+);
 
-// Modèle des membres
-const memberSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  pseudo: { type: String, default: "" },
-  nom: { type: String, default: "" },
-  image: { type: String, default: "" },
-  tags: { type: [String], default: [] }, // Si vous utilisez un tableau
-  shortdescription: { type: String, default: "" },
-  description: { type: String, default: "" },
-  links: { type: Object, default: {} },
-  content_format: { type: String, default: "" },
-  content: { type: Array, default: [] },
-  softDelete: { type: Boolean, default: true },
-});
+// Modèle principal
+const memberSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-// Application du plugin uniqueValidator pour la vérification des champs uniques
-memberSchema.plugin(uniqueValidator);
+    pseudo: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
-// Export du modèle 'Member'
+    nom: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    image: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    tags: {
+      type: [String],
+      default: [],
+    },
+
+    shortdescription: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      default: "",
+    },
+
+    links: {
+      type: linkSchema,
+      default: () => ({}),
+    },
+
+    content_format: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    content: {
+      type: [contentSchema],
+      default: [],
+    },
+
+    softDelete: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
 module.exports = mongoose.model("Member", memberSchema);

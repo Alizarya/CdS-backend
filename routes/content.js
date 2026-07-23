@@ -1,52 +1,44 @@
 const contentController = require("../controllers/content");
 
 async function routes(fastify, options) {
-  // Route pour afficher les contenus
+  // Récupérer tous les contenus
   fastify.get("/content", {
     schema: {
       description: "Route pour récupérer tous les contenus.",
       tags: ["Content"],
-      summary: "Contenus du site",
-      // Autres détails de la documentation
-      // ...
+      summary: "Liste des contenus",
     },
     handler: contentController.getContent,
   });
 
-  // Route pour supprimer un contenu
-  fastify.delete("/content:id", {
-    schema: {
-      description: "Route pour supprimer un contenu.",
-      tags: ["Content"],
-      summary: "Suppression contenu",
-      // Autres détails de la documentation
-      // ...
-    },
-    handler: contentController.deleteContent,
-  });
-
-  // Route pour ajouter un contenu
+  // Créer un contenu
   fastify.post("/content", {
     schema: {
       description: "Route pour créer un nouveau contenu.",
       tags: ["Content"],
       summary: "Création contenu",
-      // Autres détails de la documentation
-      // ...
     },
     handler: contentController.createContent,
   });
 
-  // Route pour modifier un membre
-  fastify.put("/content:id", {
+  // Modifier un contenu
+  fastify.put("/content/:id", {
     schema: {
-      description: "Route pour modifier les infos d'un contenu.",
+      description: "Route pour modifier un contenu.",
       tags: ["Content"],
       summary: "Modification contenu",
-      // Autres détails de la documentation
-      // ...
     },
     handler: contentController.updateContent,
+  });
+
+  // Supprimer un contenu
+  fastify.delete("/content/:id", {
+    schema: {
+      description: "Route pour supprimer un contenu.",
+      tags: ["Content"],
+      summary: "Suppression contenu",
+    },
+    handler: contentController.deleteContent,
   });
 }
 
