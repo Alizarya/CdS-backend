@@ -26,6 +26,12 @@ fastify.register(fastifyStatic, {
   prefix: "/",
 });
 
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, "data", "images"),
+  prefix: "/images/",
+  decorateReply: false,
+});
+
 // Gestion de swagger
 fastify.register(require("@fastify/swagger"), {
   openapi: {

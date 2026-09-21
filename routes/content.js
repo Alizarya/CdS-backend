@@ -1,4 +1,5 @@
 const contentController = require("../controllers/content");
+const auth = require("../middlewares/auth");
 
 async function routes(fastify, options) {
   // Récupérer tous les contenus
@@ -11,8 +12,19 @@ async function routes(fastify, options) {
     handler: contentController.getContent,
   });
 
+  // Récupérer un contenu par son ID
+  fastify.get("/content/:id", {
+    schema: {
+      description: "Route pour récupérer un contenu par son ID.",
+      tags: ["Content"],
+      summary: "Contenu par ID",
+    },
+    handler: contentController.getContentById,
+  });
+
   // Créer un contenu
   fastify.post("/content", {
+    preHandler: auth,
     schema: {
       description: "Route pour créer un nouveau contenu.",
       tags: ["Content"],
@@ -23,6 +35,7 @@ async function routes(fastify, options) {
 
   // Modifier un contenu
   fastify.put("/content/:id", {
+    preHandler: auth,
     schema: {
       description: "Route pour modifier un contenu.",
       tags: ["Content"],
@@ -33,6 +46,7 @@ async function routes(fastify, options) {
 
   // Supprimer un contenu
   fastify.delete("/content/:id", {
+    preHandler: auth,
     schema: {
       description: "Route pour supprimer un contenu.",
       tags: ["Content"],
