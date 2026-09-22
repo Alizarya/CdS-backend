@@ -140,6 +140,7 @@ fastify.register(fastifyHelmet, {
 // Import des routes
 fastify.register(require("./routes/user"));
 fastify.register(require("./routes/content"));
+fastify.register(require("./routes/rss"));
 fastify.register(require("./routes/form"));
 fastify.register(require("./routes/members"));
 

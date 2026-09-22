@@ -1,0 +1,16 @@
+{
+  "feeds": [
+    {
+      "id": 1,
+      "name": "Marie Dupont",
+      "url": "https://mariedupont.fr/feed.xml",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Jean Martin",
+      "url": "https://jeanmartin.fr/rss",
+      "active": true
+    }
+  ]
+}
