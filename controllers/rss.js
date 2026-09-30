@@ -42,6 +42,63 @@ async function addRss(request, reply) {
   }
 }
 
+async function updateRss(request, reply) {
+  try {
+    const id = Number(request.params.id);
+
+    if (Number.isNaN(id)) {
+      return reply.status(400).send({
+        success: false,
+        message: "L'identifiant du flux RSS est invalide.",
+      });
+    }
+
+    const { name, url, online } = request.body || {};
+
+    /*
+     * Au moins une propriété doit être fournie.
+     */
+    if (name === undefined && url === undefined && online === undefined) {
+      return reply.status(400).send({
+        success: false,
+        message: "Aucune modification n'a été fournie.",
+      });
+    }
+
+    /*
+     * online doit obligatoirement être un booléen.
+     */
+    if (online !== undefined && typeof online !== "boolean") {
+      return reply.status(400).send({
+        success: false,
+        message: "La propriété online doit être un booléen.",
+      });
+    }
+
+    const updatedFeed = await rssService.updateFeed(id, {
+      name,
+      url,
+      online,
+    });
+
+    if (!updatedFeed) {
+      return reply.status(404).send({
+        success: false,
+        message: "Flux RSS introuvable.",
+      });
+    }
+
+    return reply.send(updatedFeed);
+  } catch (error) {
+    request.log.error(error);
+
+    return reply.status(500).send({
+      success: false,
+      message: "Impossible de modifier le flux RSS.",
+    });
+  }
+}
+
 async function deleteRss(request, reply) {
   try {
     const id = Number(request.params.id);
@@ -80,5 +137,6 @@ async function deleteRss(request, reply) {
 module.exports = {
   getRss,
   addRss,
+  updateRss,
   deleteRss,
 };

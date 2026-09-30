@@ -2,15 +2,52 @@
   "feeds": [
     {
       "id": 1,
-      "name": "Marie Dupont",
-      "url": "https://mariedupont.fr/feed.xml",
-      "active": true
+      "name": "Café des sciences - Bluesky",
+      "url": "https://bsky.app/profile/cafe-sciences.org/rss",
+      "active": true,
+      "online": true
     },
     {
       "id": 2,
-      "name": "Jean Martin",
-      "url": "https://jeanmartin.fr/rss",
-      "active": true
+      "name": "Brusicor - Bluesky",
+      "url": "https://bsky.app/profile/brusicor02.bsky.social/rss",
+      "active": true,
+      "online": true
+    },
+    {
+      "id": 7,
+      "name": "Tania Louis - Youtube",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9JQQll_r5k1O_Y18ymTp4g",
+      "active": true,
+      "online": true
+    },
+    {
+      "id": 8,
+      "name": "Le nid de pie - Podcast",
+      "url": "https://leniddepie.lepodcast.fr/rss",
+      "active": true,
+      "online": true
+    },
+    {
+      "id": 9,
+      "name": "Taupo - Blog",
+      "url": "https://ssaft.com/Blog/dotclear/?feed/atom",
+      "active": true,
+      "online": true
+    },
+    {
+      "id": 10,
+      "name": "Papier maché - Blog",
+      "url": "https://papiermachesciences.org/feed/",
+      "active": true,
+      "online": true
+    },
+    {
+      "id": 11,
+      "name": "OamGui - Youtube",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCCTpSqPzMTr4TfJQm5108vQ",
+      "active": true,
+      "online": true
     }
   ]
 }

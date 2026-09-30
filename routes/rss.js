@@ -1,5 +1,6 @@
 const rssController = require("../controllers/rss");
-const auth = require("../middlewares/auth");
+
+const communicationAuth = require("../middlewares/communicationAuth");
 
 async function routes(fastify, options) {
   // Récupérer le flux RSS agrégé
@@ -14,7 +15,7 @@ async function routes(fastify, options) {
 
   // Ajouter un flux RSS
   fastify.post("/rss", {
-    preHandler: auth,
+    preHandler: communicationAuth,
     schema: {
       description: "Route pour ajouter un flux RSS à la liste des sources.",
       tags: ["RSS"],
@@ -23,9 +24,20 @@ async function routes(fastify, options) {
     handler: rssController.addRss,
   });
 
+  // Modifier un flux RSS
+  fastify.put("/rss/:id", {
+    preHandler: communicationAuth,
+    schema: {
+      description: "Route pour modifier un flux RSS.",
+      tags: ["RSS"],
+      summary: "Modifier un flux RSS",
+    },
+    handler: rssController.updateRss,
+  });
+
   // Supprimer un flux RSS
   fastify.delete("/rss/:id", {
-    preHandler: auth,
+    preHandler: communicationAuth,
     schema: {
       description: "Route pour supprimer un flux RSS de la liste des sources.",
       tags: ["RSS"],

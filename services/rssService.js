@@ -1,47 +1,79 @@
 const path = require("path");
+
 const Parser = require("rss-parser");
 
 const { readJson, writeJson } = require("../utils/jsonStorage");
 
 const rssFile = path.join(__dirname, "../data/rss.json");
 
-const parser = new Parser();
+const parser = new Parser({
+  customFields: {
+    item: ["content:encoded", "dc:creator"],
+  },
+});
 
 async function getAggregatedRss() {
   const data = readJson(rssFile);
 
   const activeFeeds = data.feeds.filter((feed) => feed.active !== false);
 
-  const results = await Promise.allSettled(
+  const feedResults = await Promise.all(
     activeFeeds.map(async (feed) => {
-      const parsedFeed = await parser.parseURL(feed.url);
+      try {
+        const parsedFeed = await parser.parseURL(feed.url);
 
-      return parsedFeed.items.map((item) => ({
-        title: item.title || "",
-        link: item.link || "",
-        date: item.isoDate || item.pubDate || null,
-        author: item.creator || item.author || feed.name,
-        source: feed.name,
-      }));
+        const items = parsedFeed.items.map((item) => ({
+          title: item.title || "",
+
+          content:
+            item.contentSnippet || item.content || item.description || "",
+
+          link: item.link || "",
+
+          date: item.isoDate || item.pubDate || null,
+
+          author: item.creator || item.author || feed.name,
+
+          source: feed.name,
+        }));
+
+        return {
+          feed: {
+            ...feed,
+            status: "ok",
+            error: null,
+          },
+
+          items,
+        };
+      } catch (error) {
+        return {
+          feed: {
+            ...feed,
+            status: "error",
+            error: error.message || "Impossible de récupérer le flux.",
+          },
+
+          items: [],
+        };
+      }
     }),
   );
 
-  const items = [];
+  const feeds = feedResults.map((result) => result.feed);
 
-  results.forEach((result) => {
-    if (result.status === "fulfilled") {
-      items.push(...result.value);
-    }
-  });
+  const items = feedResults.flatMap((result) => result.items);
 
   items.sort((a, b) => {
     const dateA = a.date ? new Date(a.date).getTime() : 0;
+
     const dateB = b.date ? new Date(b.date).getTime() : 0;
 
     return dateB - dateA;
   });
 
   return {
+    feeds,
     items,
   };
 }
@@ -67,6 +99,7 @@ async function addFeed({ name, url }) {
     name,
     url,
     active: true,
+    online: true,
   };
 
   data.feeds.push(newFeed);
@@ -74,6 +107,40 @@ async function addFeed({ name, url }) {
   writeJson(rssFile, data);
 
   return newFeed;
+}
+
+async function updateFeed(id, { name, url, online }) {
+  const data = readJson(rssFile);
+
+  const index = data.feeds.findIndex((feed) => feed.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const currentFeed = data.feeds[index];
+
+  const updatedFeed = {
+    ...currentFeed,
+  };
+
+  if (name !== undefined) {
+    updatedFeed.name = name;
+  }
+
+  if (url !== undefined) {
+    updatedFeed.url = url;
+  }
+
+  if (online !== undefined) {
+    updatedFeed.online = online;
+  }
+
+  data.feeds[index] = updatedFeed;
+
+  writeJson(rssFile, data);
+
+  return updatedFeed;
 }
 
 async function deleteFeed(id) {
@@ -95,5 +162,6 @@ async function deleteFeed(id) {
 module.exports = {
   getAggregatedRss,
   addFeed,
+  updateFeed,
   deleteFeed,
 };

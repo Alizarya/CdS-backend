@@ -31,4 +31,4 @@ userSchema.plugin(uniqueValidator, {
   message: "Cet e-mail est déjà enregistré.",
 });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.models.User || mongoose.model("User", userSchema);

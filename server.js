@@ -143,6 +143,7 @@ fastify.register(require("./routes/content"));
 fastify.register(require("./routes/rss"));
 fastify.register(require("./routes/form"));
 fastify.register(require("./routes/members"));
+fastify.register(require("./routes/communicationAuth"));
 
 // Route du serveur
 fastify.get("/", async (request, reply) => {
@@ -181,8 +182,8 @@ fastify.setErrorHandler((error, request, reply) => {
 // Démarrage du serveur
 const start = async () => {
   try {
-    await fastify.listen({ port: 5000 });
-    //await fastify.listen({ path: "passenger" });
+    //await fastify.listen({ port: 5000 });
+    await fastify.listen({ path: "passenger" });
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

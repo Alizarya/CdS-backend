@@ -14,6 +14,11 @@ async function getContent(request, reply) {
   try {
     const data = readJson(contentFile);
 
+    // Trier les contenus selon leur ordre
+    data.contents.sort((a, b) => {
+      return (a.order || 0) - (b.order || 0);
+    });
+
     // Récupérer uniquement le contenu featured
     if (request.query.featured === "true") {
       const featuredContent = data.contents.find(
@@ -72,16 +77,23 @@ async function getContentById(request, reply) {
 async function createContent(request, reply) {
   try {
     const data = readJson(contentFile);
-
     const contents = data.contents;
 
+    // Générer le nouvel ID
     const newId =
       contents.length > 0
         ? Math.max(...contents.map((content) => content.id)) + 1
         : 1;
 
+    // Générer automatiquement le nouvel ordre
+    const newOrder =
+      contents.length > 0
+        ? Math.max(...contents.map((content) => content.order || 0)) + 1
+        : 1;
+
     const newContent = {
       id: newId,
+      order: newOrder,
       ...request.body,
     };
 
@@ -109,6 +121,7 @@ async function createContent(request, reply) {
 async function updateContent(request, reply) {
   try {
     const data = readJson(contentFile);
+
     const id = Number(request.params.id);
 
     const index = data.contents.findIndex((item) => item.id === id);
@@ -123,30 +136,63 @@ async function updateContent(request, reply) {
     const oldContent = data.contents[index];
     const oldImage = oldContent.image;
 
+    const oldOrder = oldContent.order || 0;
+    const newOrder =
+      request.body.order !== undefined ? Number(request.body.order) : oldOrder;
+
     const updatedContent = {
       ...oldContent,
       ...request.body,
       id,
+      order: newOrder,
     };
 
-    // Si une nouvelle image est envoyée,
-    // elle est convertie et enregistrée dans data/images
-    if (request.body.image && request.body.image !== oldImage) {
-      updatedContent.image = await saveContentImage(request.body.image);
+    // Gestion du changement d'ordre
+    if (newOrder !== oldOrder) {
+      const sortedContents = [...data.contents].sort(
+        (a, b) => (a.order || 0) - (b.order || 0),
+      );
+
+      const oldIndex = sortedContents.findIndex((item) => item.id === id);
+
+      // Retirer temporairement le contenu déplacé
+      sortedContents.splice(oldIndex, 1);
+
+      // Limiter la nouvelle position
+      const targetIndex = Math.max(
+        0,
+        Math.min(newOrder - 1, sortedContents.length),
+      );
+
+      // Insérer à sa nouvelle position
+      sortedContents.splice(targetIndex, 0, updatedContent);
+
+      // Réattribuer tous les orders
+      sortedContents.forEach((item, index) => {
+        item.order = index + 1;
+      });
+
+      data.contents = sortedContents;
+    } else {
+      data.contents[index] = updatedContent;
     }
 
-    data.contents[index] = updatedContent;
+    // Gestion de l'image
+    if (request.body.image && request.body.image !== oldImage) {
+      data.contents.find((item) => item.id === id).image =
+        await saveContentImage(request.body.image);
+    }
 
-    // Écrire le nouveau contenu dans content.json
     writeJson(contentFile, data);
 
-    // Si une nouvelle image a remplacé l'ancienne,
-    // supprimer l'ancien fichier
-    if (oldImage && updatedContent.image !== oldImage) {
+    // Supprimer l'ancienne image si elle a été remplacée
+    const finalContent = data.contents.find((item) => item.id === id);
+
+    if (oldImage && finalContent.image !== oldImage) {
       await deleteContentImage(oldImage);
     }
 
-    return reply.send(updatedContent);
+    return reply.send(finalContent);
   } catch (error) {
     request.log.error(error);
 
@@ -161,6 +207,7 @@ async function updateContent(request, reply) {
 async function deleteContent(request, reply) {
   try {
     const data = readJson(contentFile);
+
     const id = Number(request.params.id);
 
     const index = data.contents.findIndex((item) => item.id === id);
